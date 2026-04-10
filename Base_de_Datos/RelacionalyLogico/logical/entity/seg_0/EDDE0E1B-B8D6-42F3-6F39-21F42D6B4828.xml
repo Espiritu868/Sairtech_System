@@ -1,0 +1,74 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="EDDE0E1B-B8D6-42F3-6F39-21F42D6B4828" name="USUARIO">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:11:33 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id_usuario" id="1635CE1F-F0F6-983B-BCED-B4CB5FF65038">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:11:39 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="usuario" id="801B73FB-6CE2-8D1E-0A70-A00B7C9C16AB">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:11:50 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="password_hash" id="856971C2-CFCA-5456-AAEC-F2F1E1725892">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:12:01 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="rol" id="EF722FC4-05C4-8849-9110-E1919A7C3161">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:12:12 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="6F10A940-6DCB-A75D-4F85-A80F04D4AF9F" name="USUARIOS PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:14:27 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>1635CE1F-F0F6-983B-BCED-B4CB5FF65038</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

@@ -1,0 +1,120 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="4973C20D-FC3C-449E-444E-5294C55FB020" name="ORDEN_REPARACION">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:13:05 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id_orden" id="96AC72E5-5475-707A-884D-AA2D83731C1F">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:13:15 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="fecha_ingreso" id="5EF63493-96A9-0395-2CDE-B4652A67445B">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:13:29 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="problema_reportado" id="386ED15F-328A-C6B4-005F-C9F9417AA24F">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:13:40 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="trabajo_realizado" id="EC483F9E-AC72-898A-D7B5-1A54691D965D">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:13:55 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<nullsAllowed>true</nullsAllowed>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="costo" id="0921150C-64EB-2B1A-C2F0-EB18975E463A">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:14:02 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="estado" id="2E180DFF-2085-7722-E3BF-925F06C29C46">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:14:08 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="id_equipo" id="6E7AED35-C885-B921-B653-E223314D643C">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:17:43 UTC</createdTime>
+<generatorID>E02791B7-406D-3546-23F6-A75D391F5B04</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<referedAttribute>95F48CBC-9E95-0D11-34C9-D6989BEDCFFF</referedAttribute>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="id_usuario" id="28D9F814-1A64-77BF-7A49-B147FC2743C4">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:17:52 UTC</createdTime>
+<generatorID>9760AAC8-B09A-15E3-A783-D78F8BDD0585</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<nullsAllowed>true</nullsAllowed>
+<referedAttribute>1635CE1F-F0F6-983B-BCED-B4CB5FF65038</referedAttribute>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="D1673995-C043-8239-CDA2-97D9F21ADFAE" name="ORDENES_REPARACION PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:13:28 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>96AC72E5-5475-707A-884D-AA2D83731C1F</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

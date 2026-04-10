@@ -1,0 +1,54 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="D331FB5E-4742-6076-AD3C-667983B9B4AF" name="MARCA">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:10:36 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id_marca" id="6D7645B3-B55A-6004-4340-48110580EACA">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:10:41 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nombre_marca" id="8BF053A0-81E1-6AF2-C1AA-7AE4E81D1093">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:10:50 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="009A9AF4-768A-9D97-F80F-A933C0F8B043" name="MARCAS PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:10:49 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>6D7645B3-B55A-6004-4340-48110580EACA</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

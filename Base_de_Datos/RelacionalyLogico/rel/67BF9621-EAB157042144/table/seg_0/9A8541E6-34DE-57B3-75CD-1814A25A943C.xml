@@ -1,0 +1,44 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="9A8541E6-34DE-57B3-75CD-1814A25A943C" name="TIPO_EQUIPO">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>AA8671B4-C4FE-F1B5-40E4-D0E1E65684C4</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_tipo" id="4D6AE141-EDC6-0DC0-644A-46EA5C0D069B">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>4110E8D6-2D31-A56E-243F-453A410AD6CD</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="nombre_tipo" id="5DF4F378-ED30-1302-CBB2-D2B1D3675F11">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>18895F22-9BF7-FB0F-68AF-3F8CC46A9BF8</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="1CDBBE28-41B3-78D9-211A-CE1DFA4EA44E" name="TIPOS_EQUIPO_PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>8F277641-8620-1545-DD7B-89A0624B4EE0</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="4D6AE141-EDC6-0DC0-644A-46EA5C0D069B"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

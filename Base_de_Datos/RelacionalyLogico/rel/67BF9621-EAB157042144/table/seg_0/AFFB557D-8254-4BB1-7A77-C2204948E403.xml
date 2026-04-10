@@ -1,0 +1,81 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="AFFB557D-8254-4BB1-7A77-C2204948E403" name="CLIENTE">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>F6A68A58-DD80-9E69-DE10-C0C1E1B6AACF</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_cliente" id="EC5F90E4-8690-BAF9-5246-6914D6795BF4">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>2B7942A3-3E09-34DC-EB0C-CCFD3C53CD2F</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="nombre" id="1C65608F-CC94-1F0D-9E9E-68E7A1B22F62">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>F0C82D73-7D90-7E15-6A3E-0ACDDFF2BD49</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="apellido" id="11589202-21BF-F8C6-4BF0-66D089254D17">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>CC13F9B3-2213-6E2D-C837-A6C83B4DE330</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="telefono" id="FD4E1ACC-02F8-FC5C-8560-F9213EC798FC">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>52A12046-E0BD-DE5B-40B0-F159A4DFCAFB</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="numero_identidad" id="038112AA-74AF-9619-B10C-AF3303BCDA93">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>25C48544-DE5E-8200-5E6C-8329CBE0A1D9</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="correo" id="BBDA2460-A5DB-030E-F899-E734DF61E4C4">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>9EBE46D2-8718-E56C-F454-E96D48FD34BB</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="4AD75ADC-E012-ED48-54E5-8CEAB72D7A2F" name="CLIENTES_PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>F044ED7C-B2B8-3213-0980-54CBB66E52A2</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="EC5F90E4-8690-BAF9-5246-6914D6795BF4"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

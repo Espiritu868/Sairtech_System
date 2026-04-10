@@ -1,0 +1,101 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="F5C8057C-8983-445F-725F-EA65BE1D68FE" name="EQUIPO_REGISTRADO">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:12:29 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id_equipo" id="95F48CBC-9E95-0D11-34C9-D6989BEDCFFF">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:12:38 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="modelo" id="91BA6857-365A-18B2-F851-29B5A5455309">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:12:49 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="imei_serie" id="4873F97A-A158-B584-C417-FE6BBB56E38F">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:12:56 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<nullsAllowed>true</nullsAllowed>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="id_cliente" id="D73F2F27-2B92-A21E-A1B8-5D46552A7804">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:16:42 UTC</createdTime>
+<generatorID>376DDE9C-A290-D024-F98C-BC3C141FEEC8</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<referedAttribute>2B7942A3-3E09-34DC-EB0C-CCFD3C53CD2F</referedAttribute>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="id_marca" id="93A16FCE-2EF1-0FE8-4300-5FE8A4598645">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:17:08 UTC</createdTime>
+<generatorID>7585F71F-FC35-3FC6-ABB0-24B509125C4D</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<referedAttribute>6D7645B3-B55A-6004-4340-48110580EACA</referedAttribute>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="id_tipo" id="D814C123-D3E1-EB15-F1D4-8BA5BBD6C4A0">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:17:28 UTC</createdTime>
+<generatorID>57CF4E17-FB9C-C7B6-5B3B-1576F70F3187</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="true"/>
+</engineerTo>
+<referedAttribute>4110E8D6-2D31-A56E-243F-453A410AD6CD</referedAttribute>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="EA4FEACD-6E0D-5D3F-76D4-3FC2A5E65F01" name="EQUIPOS_REGISTRADOS PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:14:22 UTC</createdTime>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="67BF9621-E125-2505-5250-EAB157042144" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>95F48CBC-9E95-0D11-34C9-D6989BEDCFFF</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

@@ -1,0 +1,126 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="CA24C49F-3B34-9E89-CADA-B2827D04589E" name="EQUIPO_REGISTRADO">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>F5C8057C-8983-445F-725F-EA65BE1D68FE</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_equipo" id="61C3CF3F-9022-B179-B0E6-3E4F296340BD">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>95F48CBC-9E95-0D11-34C9-D6989BEDCFFF</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="modelo" id="0E98F6AD-5234-21AB-091F-2B5374F1CF9A">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>91BA6857-365A-18B2-F851-29B5A5455309</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="imei_serie" id="DC649B7F-4B36-2F7A-D129-F3FA19C5BF6E">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>4873F97A-A158-B584-C417-FE6BBB56E38F</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="CLIENTES_id_cliente" id="8825A6B8-97C7-0B54-8DE8-3DACA660F482">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>D73F2F27-2B92-A21E-A1B8-5D46552A7804</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<previousColumn>false</previousColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="6D5F4FE6-C3E2-2075-A6F4-79B13E916CED" referredColumn="EC5F90E4-8690-BAF9-5246-6914D6795BF4"/>
+</associations>
+</Column>
+<Column name="MARCAS_id_marca" id="CFC2C50C-B797-0EAD-9A1D-4B4FFEDF1037">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>93A16FCE-2EF1-0FE8-4300-5FE8A4598645</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<previousColumn>false</previousColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="70FD818B-EE73-F3A1-58CE-3ABB044EEC10" referredColumn="5CAB0BA9-CAAB-AE75-5AF1-CD961CA48017"/>
+</associations>
+</Column>
+<Column name="TIPOS_EQUIPO_id_tipo" id="472EC63F-AE99-7AFA-3436-40E345C470F5">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>D814C123-D3E1-EB15-F1D4-8BA5BBD6C4A0</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<previousColumn>false</previousColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="FFD9E5B5-E03D-89F2-B0D3-875F2B8B1168" referredColumn="4D6AE141-EDC6-0DC0-644A-46EA5C0D069B"/>
+</associations>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="9CD00D1E-3E42-4E2B-395D-DF61D6013C29" name="EQUIPOS_REGISTRADOS_PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>EA4FEACD-6E0D-5D3F-76D4-3FC2A5E65F01</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="61C3CF3F-9022-B179-B0E6-3E4F296340BD"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="294F1032-10A7-F66F-B9CB-B83123885BEE" name="EQUIPOS_REGISTRADOS_MARCAS_FK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>7585F71F-FC35-3FC6-ABB0-24B509125C4D</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="CFC2C50C-B797-0EAD-9A1D-4B4FFEDF1037"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="059CF718-28C7-F398-5106-653F68451D15" name="EQUIPOS_REGISTRADOS_TIPOS_EQUIPO_FK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:11 UTC</createdTime>
+<generatorID>57CF4E17-FB9C-C7B6-5B3B-1576F70F3187</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="472EC63F-AE99-7AFA-3436-40E345C470F5"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="A824F840-9963-1036-E878-525202D87DA6" name="EQUIPOS_REGISTRADOS_CLIENTES_FK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:11 UTC</createdTime>
+<generatorID>376DDE9C-A290-D024-F98C-BC3C141FEEC8</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="8825A6B8-97C7-0B54-8DE8-3DACA660F482"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

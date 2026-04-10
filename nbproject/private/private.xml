@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-private xmlns="http://www.netbeans.org/ns/project-private/1">
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
+    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
+        <group>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/gui/PanelListadoOrdenes.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/dao/OrdenReparacionDAO.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/gui/PanelOrdenes.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/gui/VentanaPrincipal.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/gui/PanelEquipos.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/dao/EquipoRegistradoDAO.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/gui/PanelClientes.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/dao/ClienteDAO.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/gui/PanelLogin.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/dao/UsuarioDAO.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/gui/PanelUsuarios.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/modelo/Usuario.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/gui/PanelEstadisticas.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/modelo/Estadisticas.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/dao/EstadisticasDAO.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/utilidades/GeneradorPDF.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/modelo/OrdenReparacion.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/factory/ConexionFactory.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/dao/EquipoConfigDAO.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/dao/MarcaDAO.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/dao/TipoEquipoDAO.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/modelo/Cliente.java</file>
+            <file>file:/C:/UTH/PROGRAMACION%20AVANZADA%20I/PARCIAL%20II/ESTUDIANDO_PARA_EXAMEN_LUNES/SistemaTaller/src/modelo/EquipoRegistrado.java</file>
+        </group>
+    </open-files>
+</project-private>

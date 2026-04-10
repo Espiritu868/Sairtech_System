@@ -1,0 +1,62 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="5AED0842-65C1-F39C-5DDD-0ECEBC371575" name="USUARIO">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>EDDE0E1B-B8D6-42F3-6F39-21F42D6B4828</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_usuario" id="CF1FC024-5634-F76F-46F4-3ECFAC950E57">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>1635CE1F-F0F6-983B-BCED-B4CB5FF65038</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="usuario" id="81C798E6-583B-83A0-B21F-10B9E404619B">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>801B73FB-6CE2-8D1E-0A70-A00B7C9C16AB</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="password_hash" id="A2AAA494-6C5D-3BB7-8BF0-60DAA5748845">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>856971C2-CFCA-5456-AAEC-F2F1E1725892</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="rol" id="3C508B68-AE49-046C-7A21-F8F94426A625">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>EF722FC4-05C4-8849-9110-E1919A7C3161</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="20F0E8F3-7AAF-83D1-7037-24433B1AFB95" name="USUARIOS_PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>6F10A940-6DCB-A75D-4F85-A80F04D4AF9F</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="CF1FC024-5634-F76F-46F4-3ECFAC950E57"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

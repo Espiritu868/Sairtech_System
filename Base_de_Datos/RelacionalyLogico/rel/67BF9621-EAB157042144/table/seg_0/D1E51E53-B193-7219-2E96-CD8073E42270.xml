@@ -1,0 +1,130 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="D1E51E53-B193-7219-2E96-CD8073E42270" name="ORDEN_REPARACION">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>4973C20D-FC3C-449E-444E-5294C55FB020</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_orden" id="5EBB66A8-869E-B363-F9EF-14D9F6499D61">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>96AC72E5-5475-707A-884D-AA2D83731C1F</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="fecha_ingreso" id="21C7CC5C-147B-54CF-6F83-DA33D46F4712">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>5EF63493-96A9-0395-2CDE-B4652A67445B</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="problema_reportado" id="1F5D98BA-9AA7-C1B6-E882-FCE42CC6B56A">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>386ED15F-328A-C6B4-005F-C9F9417AA24F</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="trabajo_realizado" id="42E71928-E3FC-E534-75E3-77D97D6C2CAA">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>EC483F9E-AC72-898A-D7B5-1A54691D965D</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="costo" id="894A7EC7-BB5B-966B-AB46-50CF9EBB6DD5">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>0921150C-64EB-2B1A-C2F0-EB18975E463A</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="estado" id="91E43EA1-F67F-AABD-EE88-398CC1F69B7E">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>2E180DFF-2085-7722-E3BF-925F06C29C46</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="EQUIPOS_REGISTRADOS_id_equipo" id="31AC30BB-6623-E4ED-DCCA-36EEB5393ECE">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>6E7AED35-C885-B921-B653-E223314D643C</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<previousColumn>false</previousColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="1D46FB74-667B-6795-0C12-D99D2C298DAB" referredColumn="61C3CF3F-9022-B179-B0E6-3E4F296340BD"/>
+</associations>
+</Column>
+<Column name="USUARIOS_id_usuario" id="92DF0FD5-3821-CABA-45A0-6EB5CCD6531D">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>28D9F814-1A64-77BF-7A49-B147FC2743C4</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<use>0</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<previousColumn>false</previousColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="150A11F2-C704-A70C-53D2-995FC4B63FC9" referredColumn="CF1FC024-5634-F76F-46F4-3ECFAC950E57"/>
+</associations>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="1398CD02-F5BA-1C72-9BD6-B9A6E0B2AF41" name="ORDENES_REPARACION_PK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:10 UTC</createdTime>
+<generatorID>D1673995-C043-8239-CDA2-97D9F21ADFAE</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="5EBB66A8-869E-B363-F9EF-14D9F6499D61"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="7BE3DEA2-CA3B-A918-DC5C-59B3BD7928F9" name="ORDENES_REPARACION_EQUIPOS_REGISTRADOS_FK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:11 UTC</createdTime>
+<generatorID>E02791B7-406D-3546-23F6-A75D391F5B04</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="31AC30BB-6623-E4ED-DCCA-36EEB5393ECE"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="D3F87E24-B0BE-C3CC-C904-EC8B44C2DAA6" name="ORDENES_REPARACION_USUARIOS_FK">
+<createdBy>Ever Chavez</createdBy>
+<createdTime>2026-04-03 05:27:11 UTC</createdTime>
+<generatorID>9760AAC8-B09A-15E3-A783-D78F8BDD0585</generatorID>
+<ownerDesignName>RelacionalyLogico</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="92DF0FD5-3821-CABA-45A0-6EB5CCD6531D"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>
