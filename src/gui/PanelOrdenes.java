@@ -134,7 +134,7 @@ public class PanelOrdenes extends javax.swing.JPanel {
         jPanel1.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 70, -1, -1));
 
         cmbEstado.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        cmbEstado.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Recibido", "En Revision", "Reparado", "Entregado", "Sin Reparacion" }));
+        cmbEstado.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Recibido", "En Revision", "Reparado", "Sin Reparacion" }));
         cmbEstado.addActionListener(this::cmbEstadoActionPerformed);
         jPanel1.add(cmbEstado, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 340, 120, 30));
 

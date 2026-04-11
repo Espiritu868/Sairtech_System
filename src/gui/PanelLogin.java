@@ -35,11 +35,7 @@ public class PanelLogin extends javax.swing.JPanel {
         initComponents();
         aplicarDisenoLogin();
         iniciarMotorBurbujas();
-        Set<AWTKeyStroke> teclas = new HashSet<>(
-                getFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS)
-        );
-        teclas.add(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
-        setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, teclas);
+       
     }
                    
 

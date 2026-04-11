@@ -20,7 +20,8 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
         cmbFiltroEstado.setEditable(false);
         
         // Bloqueamos el ComboBox para que el usuario no pueda cambiarlo manualmente
-        cmbNuevoEstado.setEnabled(false);
+        // Quitamos "Entregado" de las opciones manuales
+        cmbNuevoEstado.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Recibido", "En Revision", "Reparado", "Sin Reparacion" }));
     }
     
     private void cargarTabla(List<Object[]> datos) {
@@ -166,7 +167,7 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
         gbc.insets = new Insets(8, 0, 0, 0);
         gbc.gridy = 11; panelGestion.add(btnEditarDetalles, gbc);
         
-        gbc.gridy = 12; panelGestion.add(btnEntregar, gbc);
+        //gbc.gridy = 12; panelGestion.add(btnEntregar, gbc);
         
         // 2. Agregamos el botón de Reimprimir debajo de Entregar
         gbc.gridy = 13; panelGestion.add(btnReimprimir, gbc);
@@ -344,63 +345,30 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
         }
 
         String idOrden = tablaGeneral.getValueAt(fila, 0).toString().trim();
-        String estadoActual = tablaGeneral.getValueAt(fila, 4).toString().trim();
-        String costoTotal = tablaGeneral.getValueAt(fila, 5).toString().trim();
+        String cliente = tablaGeneral.getValueAt(fila, 1).toString().trim();
+        String estado = tablaGeneral.getValueAt(fila, 4).toString().trim();
 
-        if (estadoActual.equals("Entregado")) {
+        if (estado.equals("Entregado")) {
             JOptionPane.showMessageDialog(this, "Esta orden ya fue entregada anteriormente.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
-        if (JOptionPane.showConfirmDialog(this, "¿Confirmar entrega y cobro de L. " + costoTotal + "?", "SairTech", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-            
-            // --- NUEVO: Pide firma para poder entregar ---
-            String tecnicoFirma = solicitarFirmaUsuario();
-            if (tecnicoFirma == null) return; // Si cancela o falla, no se entrega nada
-            
-            try {
-                // Buscamos el ID del usuario que está firmando para registrarlo en la BD
-                dao.UsuarioDAO daoUser = new dao.UsuarioDAO();
-                int idTecnico = daoUser.obtenerIdPorNombre(tecnicoFirma);
+        // --- EL NUEVO FLUJO ---
+        int respuesta = JOptionPane.showConfirmDialog(this, 
+            "Orden #" + idOrden + " de " + cliente + "\n\n" +
+            "Para garantizar que el cobro se registre en caja y se descuenten los repuestos,\n" +
+            "la entrega debe realizarse desde el módulo 'Entrega / Cobro'.\n\n" +
+            "¿Desea ir a la pantalla de cobro ahora?", 
+            "Redirigir a Caja", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
-                if (daoOrden.marcarComoEntregado(Integer.parseInt(idOrden), idTecnico)) {
-                    
-                    // Al registrar el entregado, también dejamos la huella en el historial de trabajo
-                    String fecha = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new java.util.Date());
-                    String nota = "\n\n[" + fecha + " - EQUIPO ENTREGADO Y COBRADO POR: " + tecnicoFirma.toUpperCase() + "]";
-                    String[] textos = daoOrden.obtenerTextosOrden(Integer.parseInt(idOrden));
-                    daoOrden.actualizarTextosOrden(Integer.parseInt(idOrden), textos[0], textos[1] + nota);
+        if (respuesta == JOptionPane.YES_OPTION) {
+            // Obtenemos la ventana principal para cambiar el panel
+            gui.VentanaPrincipal v = (gui.VentanaPrincipal) javax.swing.SwingUtilities.getWindowAncestor(this);
 
-                   // Generar PDF
-                    utilidades.GeneradorPDF generador = new utilidades.GeneradorPDF();
-                    String[] detalles = daoOrden.obtenerTextosOrden(Integer.parseInt(idOrden));
-                    String trabajoRealizado = (detalles[1] != null && !detalles[1].isEmpty()) ? detalles[1] + nota : "Revisión técnica general.";
-                    
-                    // --- NUEVO: Extraemos la clave y la pegamos al equipo ---
-                    String claveBD = (detalles[2] != null) ? detalles[2] : "Sin Clave";
-                    String equipoConClave = tablaGeneral.getValueAt(fila, 2).toString().trim() + "  |  Clave: " + claveBD;
-                    // --------------------------------------------------------
-
-                    int modelRow = tablaGeneral.convertRowIndexToModel(fila);
-                    String tipoEquipo = tablaGeneral.getModel().getValueAt(modelRow, 6).toString();
-                    String fechaOriginal = daoOrden.obtenerFechaOrden(Integer.parseInt(idOrden));
-                    // Cuando llames a crearTicket, pásale 'fechaOriginal' en lugar de las comillas vacías
-                    boolean ticketCreado = generador.crearTicket(
-                        idOrden, fechaOriginal, 
-                        tablaGeneral.getValueAt(fila, 1).toString().trim(), 
-                        equipoConClave, // <--- ¡AQUÍ ESTÁ!
-                        tablaGeneral.getValueAt(fila, 3).toString().trim(), 
-                        costoTotal, "SAIRTECH - TECNOLOGIA", 
-                        "Santa Barbara, Barrio La Soledad, Frente a Sastreria La Elegancia", 
-                        "8951-8040", "OJO no aplica garantia en equipos mojados, pantallas no cuentan con garantía.", 
-                        tecnicoFirma, trabajoRealizado, false, tipoEquipo, true);
-
-                    JOptionPane.showMessageDialog(this, "¡Entrega exitosa! Ticket generado.");
-                    refrescarTabla();
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error crítico al entregar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
+            // Aquí simulamos el clic en el botón de Entrega/Cobro del menú lateral
+            v.getBtnEntregaEquipos().doClick();
+            // Opcional: Podríamos pasarle el ID de la orden al nuevo panel para que lo cargue solo, 
+            // pero por ahora con que lo mande a la pantalla de cobro es un gran avance.
         }
     }//GEN-LAST:event_btnEntregarActionPerformed
     

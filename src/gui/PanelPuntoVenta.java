@@ -31,6 +31,11 @@ public class PanelPuntoVenta extends JPanel {
     private JButton btnVincularOrden;
     private JButton btnServicioManual;
     
+    // --- VARIABLES HECHAS GLOBALES PARA PODER OCULTARLAS ---
+    private JLabel lblEscaner; 
+    private JLabel lblOrden;   
+    private JPanel panelOrden; 
+    
     // Componentes Derecha (Carrito)
     private JTable tablaCarrito;
     private DefaultTableModel modeloCarrito;
@@ -41,33 +46,60 @@ public class PanelPuntoVenta extends JPanel {
 
     // Variables de Estado
     private double totalVenta = 0.0;
-    private int idOrdenVinculada = -1; // -1 significa que es solo venta de mostrador
+    private int idOrdenVinculada = -1; 
+    private String modoActual = ""; // Guardará si es "TALLER" o "MOSTRADOR"
 
-    public PanelPuntoVenta() {
+    // --- NUEVO CONSTRUCTOR CON MODO ---
+    public PanelPuntoVenta(String modo) {
+        this.modoActual = modo;
+        
         setLayout(new BorderLayout(20, 20));
         setBackground(new Color(240, 244, 248));
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // TÍTULO (Más sutil)
-        JLabel lblTitulo = new JLabel(" Caja Registradora y Entregas");
+        // TÍTULO DINÁMICO
+        String tituloPanel = modo.equals("TALLER") ? " Entrega de Equipos Reparados" : " Punto de Venta (Mostrador)";
+        JLabel lblTitulo = new JLabel(tituloPanel);
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 24));
         lblTitulo.setForeground(new Color(44, 62, 80));
         add(lblTitulo, BorderLayout.NORTH);
 
-        // PANEL IZQUIERDO (Controles)
         add(construirPanelControles(), BorderLayout.WEST);
-
-        // PANEL DERECHO (Carrito y Cobro)
         add(construirPanelCarrito(), BorderLayout.CENTER);
         
-        // Enfocar el cursor en el escáner al abrir
-        SwingUtilities.invokeLater(() -> txtCodigoBarras.requestFocus());
+        // --- APLICAR LA LÓGICA ESTRICTA DE OCULTAMIENTO ---
+        aplicarModoEstricto();
+
+        // Enfocar el cursor donde corresponda
+        SwingUtilities.invokeLater(() -> {
+            if(modo.equals("MOSTRADOR")) txtCodigoBarras.requestFocus();
+            else txtBuscarOrden.requestFocus();
+        });
+    }
+    
+    // Constructor vacío por defecto para que NetBeans no tire error en la vista de diseño
+    public PanelPuntoVenta() {
+        this("MOSTRADOR"); 
+    }
+
+    // --- EL MÉTODO QUE SEPARA EL AGUA DEL ACEITE ---
+    private void aplicarModoEstricto() {
+        if (modoActual.equals("TALLER")) {
+            // Esconder cosas de ventas rápidas (Solo queda la orden)
+            lblEscaner.setVisible(false);
+            txtCodigoBarras.setVisible(false);
+            btnServicioManual.setVisible(false);
+        } else if (modoActual.equals("MOSTRADOR")) {
+            // Esconder cosas de Taller (Solo queda el escáner)
+            lblOrden.setVisible(false);
+            panelOrden.setVisible(false);
+        }
     }
 
     private JPanel construirPanelControles() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(Color.WHITE);
-        panel.setPreferredSize(new Dimension(340, 0)); // Un poco más angosto
+        panel.setPreferredSize(new Dimension(340, 0)); 
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(220, 220, 220)),
                 BorderFactory.createEmptyBorder(15, 15, 15, 15)
@@ -80,12 +112,12 @@ public class PanelPuntoVenta extends JPanel {
         gbc.gridx = 0; gbc.gridy = 0;
 
         // SECCIÓN 1: Lector de Barras
-        JLabel lblEscaner = new JLabel("Lector de Código de Barras:");
-        lblEscaner.setFont(new Font("Segoe UI", Font.BOLD, 14)); // Letra 14
+        lblEscaner = new JLabel("Lector de Código de Barras:");
+        lblEscaner.setFont(new Font("Segoe UI", Font.BOLD, 14)); 
         panel.add(lblEscaner, gbc);
 
         txtCodigoBarras = new JTextField();
-        txtCodigoBarras.setPreferredSize(new Dimension(0, 40)); // Menos altura
+        txtCodigoBarras.setPreferredSize(new Dimension(0, 40)); 
         txtCodigoBarras.setFont(new Font("Consolas", Font.BOLD, 16));
         txtCodigoBarras.setHorizontalAlignment(SwingConstants.CENTER);
         txtCodigoBarras.setBackground(new Color(255, 255, 204)); 
@@ -95,16 +127,16 @@ public class PanelPuntoVenta extends JPanel {
         panel.add(txtCodigoBarras, gbc);
 
         // SECCIÓN 2: Vincular Reparación
-        JLabel lblOrden = new JLabel("Entregar Reparación (No. Orden):");
-        lblOrden.setFont(new Font("Segoe UI", Font.BOLD, 14)); // Letra 14
+        lblOrden = new JLabel("Entregar Reparación (No. Orden):");
+        lblOrden.setFont(new Font("Segoe UI", Font.BOLD, 14)); 
         gbc.gridy++; gbc.insets = new Insets(10, 0, 5, 0);
         panel.add(lblOrden, gbc);
 
-        JPanel panelOrden = new JPanel(new BorderLayout(10, 0));
+        panelOrden = new JPanel(new BorderLayout(10, 0));
         panelOrden.setOpaque(false);
         txtBuscarOrden = new JTextField();
-        txtBuscarOrden.setFont(new Font("Segoe UI", Font.PLAIN, 14)); // Letra 14
-        txtBuscarOrden.setPreferredSize(new Dimension(0, 35)); // Menos altura
+        txtBuscarOrden.setFont(new Font("Segoe UI", Font.PLAIN, 14)); 
+        txtBuscarOrden.setPreferredSize(new Dimension(0, 35)); 
         
         btnVincularOrden = new JButton("Vincular");
         btnVincularOrden.setBackground(new Color(52, 152, 219));
@@ -125,7 +157,7 @@ public class PanelPuntoVenta extends JPanel {
         btnServicioManual.setBackground(new Color(149, 165, 166));
         btnServicioManual.setForeground(Color.WHITE);
         btnServicioManual.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btnServicioManual.setPreferredSize(new Dimension(0, 40)); // Menos altura
+        btnServicioManual.setPreferredSize(new Dimension(0, 40)); 
         btnServicioManual.setFocusPainted(false);
         btnServicioManual.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btnServicioManual.addActionListener(e -> agregarServicioManual());
@@ -158,9 +190,8 @@ public class PanelPuntoVenta extends JPanel {
         JScrollPane scroll = new JScrollPane(tablaCarrito);
         scroll.getViewport().setBackground(Color.WHITE);
         
-        // --- AQUÍ ESTÁ EL BOTÓN REVIVIDO Y MEJORADO ---
         btnQuitarItem = new JButton("Quitar Producto");
-        btnQuitarItem.setBackground(new Color(231, 76, 60)); // Rojo elegante
+        btnQuitarItem.setBackground(new Color(231, 76, 60)); 
         btnQuitarItem.setForeground(Color.WHITE);
         btnQuitarItem.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnQuitarItem.setPreferredSize(new Dimension(180, 35));
@@ -168,13 +199,11 @@ public class PanelPuntoVenta extends JPanel {
         btnQuitarItem.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btnQuitarItem.addActionListener(e -> quitarItemCarrito());
 
-        // Contenedor para alinear el botón a la derecha con un margen superior
         JPanel panelBotonesTabla = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 0, 0));
         panelBotonesTabla.setOpaque(false);
-        panelBotonesTabla.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); // Respiro arriba
+        panelBotonesTabla.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); 
         panelBotonesTabla.add(btnQuitarItem);
 
-        // Juntamos la tabla y el botón en un solo bloque central
         JPanel panelTablaSup = new JPanel(new BorderLayout());
         panelTablaSup.setOpaque(false);
         panelTablaSup.add(scroll, BorderLayout.CENTER);
@@ -190,13 +219,11 @@ public class PanelPuntoVenta extends JPanel {
                 BorderFactory.createEmptyBorder(15, 20, 15, 20)
         ));
 
-        // Total
         lblTotalGlobal = new JLabel("TOTAL: L. 0.00");
         lblTotalGlobal.setFont(new Font("Segoe UI", Font.BOLD, 32)); 
         lblTotalGlobal.setForeground(new Color(46, 204, 113)); 
         panelCobro.add(lblTotalGlobal, BorderLayout.WEST);
 
-        // Metodo y Boton
         JPanel panelAccionesCobro = new JPanel(new GridBagLayout());
         panelAccionesCobro.setOpaque(false);
         GridBagConstraints gc = new GridBagConstraints();
@@ -313,17 +340,12 @@ public class PanelPuntoVenta extends JPanel {
         Object[] ordenSeleccionada = null;
 
         if (resultados.size() == 1) {
-            // Solo hay uno, no molestamos al usuario con ventanas extra
             ordenSeleccionada = resultados.get(0);
         } else {
-            // ¡HAY VARIOS! Llamamos a nuestra nueva tablita mágica flotante
             ordenSeleccionada = mostrarDialogoSeleccionOrden(resultados);
-            
-            // Si el usuario cerró la tablita sin elegir nada, abortamos
             if (ordenSeleccionada == null) return; 
         }
         
-        // --- Continuamos con la orden elegida ---
         int idOrd = Integer.parseInt(ordenSeleccionada[0].toString());
         String estado = ordenSeleccionada[4].toString();
         double costo = Double.parseDouble(ordenSeleccionada[5].toString());
@@ -331,7 +353,7 @@ public class PanelPuntoVenta extends JPanel {
         String modeloEquipo = ordenSeleccionada[2].toString();
         
         if (estado.equalsIgnoreCase("Entregado")) {
-            JOptionPane.showMessageDialog(this, "La orden #" + idOrd + " ya fue marcada como ENTREGADA anteriormente.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "La orden #" + idOrd + " ya fue marcada como ENTREGADA.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -345,26 +367,22 @@ public class PanelPuntoVenta extends JPanel {
         btnVincularOrden.setEnabled(false);
     }
     
-    // --- NUEVO: MODAL FLOTANTE PARA SELECCIONAR ORDENES ---
     private Object[] mostrarDialogoSeleccionOrden(List<Object[]> resultados) {
-        // Creamos un JDialog (Ventana flotante) que bloquea el panel de atrás
         javax.swing.JDialog dialogo = new javax.swing.JDialog(
                 (java.awt.Frame) SwingUtilities.getWindowAncestor(this),
                 "Seleccionar Orden de la Lista", true);
 
-        dialogo.setSize(750, 400); // Tamaño perfecto para ver los detalles
-        dialogo.setLocationRelativeTo(this); // Que aparezca en el centro
+        dialogo.setSize(750, 400); 
+        dialogo.setLocationRelativeTo(this); 
         dialogo.setLayout(new BorderLayout(10, 10));
         dialogo.getContentPane().setBackground(Color.WHITE);
 
-        // Diseñamos la tabla temporal
         String[] columnas = {"No. Orden", "Cliente", "Equipo", "Falla/Trabajo", "Costo"};
         DefaultTableModel modeloTemp = new DefaultTableModel(columnas, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
 
         for (Object[] fila : resultados) {
-            // Llenamos la tabla con: ID, Cliente, Modelo, Problema, Costo
             modeloTemp.addRow(new Object[]{
                 "#" + fila[0], fila[1], fila[2], fila[3], "L. " + fila[5]
             });
@@ -375,7 +393,6 @@ public class PanelPuntoVenta extends JPanel {
         tablaBusqueda.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         tablaBusqueda.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
         
-        // Ajustamos anchos para que se lea bien
         tablaBusqueda.getColumnModel().getColumn(0).setPreferredWidth(80);
         tablaBusqueda.getColumnModel().getColumn(1).setPreferredWidth(200);
         tablaBusqueda.getColumnModel().getColumn(3).setPreferredWidth(250);
@@ -385,7 +402,6 @@ public class PanelPuntoVenta extends JPanel {
         scroll.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         dialogo.add(scroll, BorderLayout.CENTER);
 
-        // Panel de abajo con botón y texto de ayuda
         JPanel panelSur = new JPanel(new BorderLayout());
         panelSur.setBackground(Color.WHITE);
         panelSur.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
@@ -402,34 +418,31 @@ public class PanelPuntoVenta extends JPanel {
         btnSeleccionar.setFocusPainted(false);
         panelSur.add(btnSeleccionar, BorderLayout.EAST);
 
-        // Variable para guardar lo que elija el usuario (usamos un array de 1 posición como truco de Java)
         final Object[][] seleccion = {null};
 
-        // Evento del botón
         btnSeleccionar.addActionListener(e -> {
             int filaSeleccionada = tablaBusqueda.getSelectedRow();
             if (filaSeleccionada >= 0) {
-                seleccion[0] = resultados.get(filaSeleccionada); // Agarramos el dato original de la BD
-                dialogo.dispose(); // Cerramos y destruimos la ventana flotante
+                seleccion[0] = resultados.get(filaSeleccionada); 
+                dialogo.dispose(); 
             } else {
                 JOptionPane.showMessageDialog(dialogo, "Por favor, seleccione una orden de la lista.");
             }
         });
 
-        // Evento mágico: Doble clic en la tabla
         tablaBusqueda.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 2 && tablaBusqueda.getSelectedRow() != -1) {
                     seleccion[0] = resultados.get(tablaBusqueda.getSelectedRow());
-                    dialogo.dispose(); // Cierra igual que el botón
+                    dialogo.dispose(); 
                 }
             }
         });
 
         dialogo.add(panelSur, BorderLayout.SOUTH);
-        dialogo.setVisible(true); // Esto "congela" el programa aquí hasta que el diálogo se cierre
+        dialogo.setVisible(true); 
 
-        return seleccion[0]; // Retorna la orden elegida (o null si cerró con la 'X')
+        return seleccion[0]; 
     }
 
     private void agregarServicioManual() {
@@ -501,9 +514,12 @@ public class PanelPuntoVenta extends JPanel {
         int idRecibo = daoVenta.registrarVentaCompleta(venta, listaDetalles);
 
         if (idRecibo != -1) {
-            JOptionPane.showMessageDialog(this, "¡Venta Registrada Exitosamente!\nRecibo #" + idRecibo, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "¡Cobro Registrado Exitosamente!\nTransacción #" + idRecibo, "Éxito", JOptionPane.INFORMATION_MESSAGE);
             
-            // --- LLAMADA A LA IMPRESORA TÉRMICA ---
+            // --- DECISIÓN DE IMPRESIÓN ---
+            // Aquí mantendremos la impresora térmica para ambos por ahora, 
+            // pero el sistema ya diferencia si viene de Taller o Mostrador.
+            // Si después quieres hacer que TALLER imprima PDF, lo puedes cambiar aquí.
             utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta();
             impresora.imprimirReciboVenta(idRecibo);
             // --------------------------------------
@@ -514,9 +530,12 @@ public class PanelPuntoVenta extends JPanel {
             txtBuscarOrden.setEnabled(true);
             btnVincularOrden.setEnabled(true);
             cmbMetodoPago.setSelectedIndex(0);
-            txtCodigoBarras.requestFocus();
+            
+            if(modoActual.equals("MOSTRADOR")) txtCodigoBarras.requestFocus();
+            else txtBuscarOrden.requestFocus();
+            
         } else {
-            JOptionPane.showMessageDialog(this, "Hubo un error al registrar la venta. La base de datos no se modificó.", "Error Crítico", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Hubo un error al registrar el cobro.", "Error Crítico", JOptionPane.ERROR_MESSAGE);
         }
 
         btnCobrar.setEnabled(true);

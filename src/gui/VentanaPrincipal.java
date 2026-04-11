@@ -71,12 +71,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         panelContenedor.repaint();
     }
     private void seleccionarBotonMenu(javax.swing.JButton botonActivo) {
-        // Esta línea enciende TODOS los sub-botones de manera limpia sin hacer 15 líneas de código
         javax.swing.JButton[] todosLosBotones = {
             btnIngresoEquipos, btnControlOrdenes, btnEntregaEquipos, 
             btnPuntoVenta, btnInventario, btnProveedores, 
             btnClientes, btnHistorialEquipos, 
-            btnDashboard, btnGestionUsuarios
+            btnDashboard, btnGestionUsuarios,
+            btnPanelKnijico
         };
         
         for (javax.swing.JButton b : todosLosBotones) {
@@ -221,6 +221,26 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         
         btnDashboard = new javax.swing.JButton("Dashboard");
         btnGestionUsuarios = new javax.swing.JButton("Usuarios del Sistema");
+        
+        // --- INICIALIZAR BOTÓN KNIJICO CON DISEÑO DE MARCA ---
+        btnPanelKnijico = new javax.swing.JButton("Admin. Pantallas Knijico");
+        btnPanelKnijico.setPreferredSize(new java.awt.Dimension(250, 50)); 
+        btnPanelKnijico.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 15));
+        btnPanelKnijico.setForeground(java.awt.Color.WHITE);
+        btnPanelKnijico.setBackground(new java.awt.Color(243, 156, 18)); // Naranja Knijico
+        btnPanelKnijico.setBorderPainted(false);
+        btnPanelKnijico.setFocusPainted(false);
+        btnPanelKnijico.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        
+        // Hover personalizado para el botón naranja
+        btnPanelKnijico.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if(btnPanelKnijico.isEnabled()) btnPanelKnijico.setBackground(new java.awt.Color(211, 84, 0)); // Naranja oscuro hover
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btnPanelKnijico.setBackground(new java.awt.Color(243, 156, 18));
+            }
+        });
 
         // --- CREAR LAS CATEGORÍAS (ACORDEONES) ---
         // Usamos texto limpio en lugar de emojis problemáticos
@@ -228,12 +248,19 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         javax.swing.JPanel catVentas = crearMenuColapsable("[ Ventas e Inventario ]", false, btnPuntoVenta, btnInventario, btnProveedores);
         javax.swing.JPanel catDirectorios = crearMenuColapsable("[ Directorios ]", false, btnClientes, btnHistorialEquipos);
         
-        // Guardamos el panel de admin en nuestra variable global para poder ocultarlo luego
+        
         panelCategoriaAdmin = crearMenuColapsable("[ Administración ]", false, btnDashboard, btnGestionUsuarios);
         panelMenu.add(panelCategoriaAdmin);
         panelMenu.add(catTaller);
         panelMenu.add(catVentas);
+        // ... (código de los acordeones)
         panelMenu.add(catDirectorios);
+        
+        javax.swing.JLabel separadorKnijico = new javax.swing.JLabel();
+        separadorKnijico.setPreferredSize(new java.awt.Dimension(250, 30)); 
+        panelMenu.add(separadorKnijico);
+        
+        panelMenu.add(btnPanelKnijico);
 
         // Botón Salir (Al final)
         btnSalir = new javax.swing.JButton("Cerrar Sesión");
@@ -330,8 +357,18 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         mostrarPanel(new PanelIngresoEquipos());
         seleccionarBotonMenu(btnIngresoEquipos);
     } 
+    
+    private void btnKnijicoActionPerformed(java.awt.event.ActionEvent evt) {                                            
+        mostrarPanel(new PanelKnijico()); // Abrirá tu nuevo panel
+        seleccionarBotonMenu(btnPanelKnijico);
+    }
+    
+    private void btnEntregaCobroActionPerformed(java.awt.event.ActionEvent evt) {                                            
+        mostrarPanel(new PanelPuntoVenta("TALLER")); // <--- Agregamos "TALLER"
+        seleccionarBotonMenu(btnEntregaEquipos); 
+    }
 
-    private void btnListadoActionPerformed(java.awt.event.ActionEvent evt) {                                           
+    private void btnListadoActionPerformed(java.awt.event.ActionEvent evt) {                                            
         mostrarPanel(new PanelListadoOrdenes());
         seleccionarBotonMenu(btnControlOrdenes);
     } 
@@ -341,7 +378,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         seleccionarBotonMenu(btnClientes);
     }
 
-    private void btnEstadisticasActionPerformed(java.awt.event.ActionEvent evt) {                                                
+    private void btnEstadisticasActionPerformed(java.awt.event.ActionEvent evt) {                                            
         mostrarPanel(new PanelEstadisticas());
         seleccionarBotonMenu(btnDashboard);
     }
@@ -352,11 +389,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }
     
     private void btnPuntoVentaActionPerformed(java.awt.event.ActionEvent evt) {                                            
-        mostrarPanel(new PanelPuntoVenta());
-        seleccionarBotonMenu(btnPuntoVenta);
-        
-        // Esta pequeña trampa oculta el panel lateral temporalmente
-        // Y en PanelPuntoVenta y en los otros paneles lo ponemos visible
+        mostrarPanel(new PanelPuntoVenta("MOSTRADOR")); // <--- Agregamos "MOSTRADOR"
+        seleccionarBotonMenu(btnPuntoVenta);        
     }
 
     private void btnUsuariosActionPerformed(java.awt.event.ActionEvent evt) {                                            
@@ -434,17 +468,22 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         // Enlazar los botones con tus paneles existentes
         btnIngresoEquipos.addActionListener(this::btnIngresoActionPerformed);
         btnControlOrdenes.addActionListener(this::btnListadoActionPerformed);
+        btnEntregaEquipos.addActionListener(this::btnEntregaCobroActionPerformed); // <-- Conectado al nuevo método
+        
+        btnPuntoVenta.addActionListener(this::btnPuntoVentaActionPerformed);
+        btnInventario.addActionListener(this::btnInventarioActionPerformed);
+        
         btnClientes.addActionListener(this::btnClientesActionPerformed);
+        
         btnDashboard.addActionListener(this::btnEstadisticasActionPerformed);
         btnGestionUsuarios.addActionListener(this::btnUsuariosActionPerformed);
+        
+        btnPanelKnijico.addActionListener(this::btnKnijicoActionPerformed);
 
         // Función para los módulos que aún no existen
         java.awt.event.ActionListener accionProximamente = e -> 
             javax.swing.JOptionPane.showMessageDialog(this, "🛠️ Este módulo está en desarrollo. ¡Próximamente!", "Sairtech Dev", javax.swing.JOptionPane.INFORMATION_MESSAGE);
         
-        btnEntregaEquipos.addActionListener(accionProximamente);
-        btnPuntoVenta.addActionListener(this::btnPuntoVentaActionPerformed);
-        btnInventario.addActionListener(this::btnInventarioActionPerformed);
         btnProveedores.addActionListener(accionProximamente);
         btnHistorialEquipos.addActionListener(accionProximamente);
     }
@@ -466,6 +505,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     // Módulo 3
     private javax.swing.JButton btnClientes;
     private javax.swing.JButton btnHistorialEquipos;
+    private javax.swing.JButton btnPanelKnijico;
     // Módulo 4 (Admin)
     private javax.swing.JButton btnDashboard;
     private javax.swing.JButton btnGestionUsuarios;
@@ -502,6 +542,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
     public void setIdUsuarioActivo(int idUsuarioActivo) {
         this.idUsuarioActivo = idUsuarioActivo;
+    }
+    
+    public javax.swing.JButton getBtnEntregaEquipos() {
+        return btnEntregaEquipos;
     }
         
     // --- Estas dos faltaban ---
