@@ -199,18 +199,19 @@
             return textos;
         }
 
-        public boolean actualizarTextosOrden(int idOrden, String nuevoProblema, String nuevoTrabajo) {
-            String sql = "UPDATE Ordenes_Reparacion SET problema_reportado = ?, trabajo_realizado = ? WHERE id_orden = ?";
-            try (Connection conexion = factory.getConexion();
-                 PreparedStatement comando = conexion.prepareStatement(sql)) {
+        public boolean actualizarTextosOrden(int idOrden, String problema, String trabajo, String seguridad) {
+            String sql = "UPDATE ordenes_reparacion SET problema_reportado = ?, trabajo_realizado = ?, seguridad_dispositivo = ? WHERE id_orden = ?";
+            try (java.sql.Connection con = new factory.ConexionFactory().getConexion();
+                 java.sql.PreparedStatement ps = con.prepareStatement(sql)) {
 
-                comando.setString(1, nuevoProblema);
-                comando.setString(2, nuevoTrabajo);
-                comando.setInt(3, idOrden);
-                return comando.executeUpdate() > 0;
+                ps.setString(1, problema);
+                ps.setString(2, trabajo);
+                ps.setString(3, seguridad); // <--- Guardamos la nueva clave
+                ps.setInt(4, idOrden);
 
-            } catch (SQLException e) {
-                System.err.println("Error al actualizar textos: " + e.getMessage());
+                return ps.executeUpdate() > 0;
+            } catch (Exception e) {
+                System.err.println("Error al actualizar detalles y clave: " + e.getMessage());
                 return false;
             }
         }

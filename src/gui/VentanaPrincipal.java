@@ -358,6 +358,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         seleccionarBotonMenu(btnIngresoEquipos);
     } 
     
+    private void btnProveedoresActionPerformed(java.awt.event.ActionEvent evt) {                                            
+        mostrarPanel(new PanelProveedores());
+        seleccionarBotonMenu(btnProveedores);
+    }
+    
     private void btnKnijicoActionPerformed(java.awt.event.ActionEvent evt) {                                            
         mostrarPanel(new PanelKnijico()); // Abrirá tu nuevo panel
         seleccionarBotonMenu(btnPanelKnijico);
@@ -391,6 +396,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private void btnPuntoVentaActionPerformed(java.awt.event.ActionEvent evt) {                                            
         mostrarPanel(new PanelPuntoVenta("MOSTRADOR")); // <--- Agregamos "MOSTRADOR"
         seleccionarBotonMenu(btnPuntoVenta);        
+    }
+    
+    private void btnHistorialEquiposActionPerformed(java.awt.event.ActionEvent evt) {                                            
+        mostrarPanel(new PanelHistorialEquipos());
+        seleccionarBotonMenu(btnHistorialEquipos);
     }
 
     private void btnUsuariosActionPerformed(java.awt.event.ActionEvent evt) {                                            
@@ -468,10 +478,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         // Enlazar los botones con tus paneles existentes
         btnIngresoEquipos.addActionListener(this::btnIngresoActionPerformed);
         btnControlOrdenes.addActionListener(this::btnListadoActionPerformed);
-        btnEntregaEquipos.addActionListener(this::btnEntregaCobroActionPerformed); // <-- Conectado al nuevo método
+        btnEntregaEquipos.addActionListener(this::btnEntregaCobroActionPerformed);
         
         btnPuntoVenta.addActionListener(this::btnPuntoVentaActionPerformed);
         btnInventario.addActionListener(this::btnInventarioActionPerformed);
+        btnProveedores.addActionListener(this::btnProveedoresActionPerformed);
         
         btnClientes.addActionListener(this::btnClientesActionPerformed);
         
@@ -480,12 +491,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         
         btnPanelKnijico.addActionListener(this::btnKnijicoActionPerformed);
 
-        // Función para los módulos que aún no existen
-        java.awt.event.ActionListener accionProximamente = e -> 
-            javax.swing.JOptionPane.showMessageDialog(this, "🛠️ Este módulo está en desarrollo. ¡Próximamente!", "Sairtech Dev", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-        
-        btnProveedores.addActionListener(accionProximamente);
-        btnHistorialEquipos.addActionListener(accionProximamente);
+        btnHistorialEquipos.addActionListener(this::btnHistorialEquiposActionPerformed);
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

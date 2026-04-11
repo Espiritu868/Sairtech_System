@@ -12,6 +12,7 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -23,9 +24,15 @@ import javax.swing.table.DefaultTableModel;
 
 public class PanelInventario extends javax.swing.JPanel {
 
-   private JTextField txtCodigo;
+    private JTextField txtCodigo;
     private JTextField txtNombre;
+    private JTextField txtUbicacion; // <--- NUEVA CAJA DE TEXTO
     private JComboBox<String> cmbCategoria;
+    private JComboBox<modelo.Proveedor> cmbProveedor; 
+    
+    private JCheckBox chkAplicaTecnico;
+    private JTextField txtPrecioTecnico;
+
     private JTextField txtPrecioCompra;
     private JTextField txtPrecioVenta;
     private JTextField txtStock;
@@ -46,22 +53,19 @@ public class PanelInventario extends javax.swing.JPanel {
         setBackground(new Color(240, 244, 248));
         setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
-        // TÍTULO
         JLabel lblTitulo = new JLabel("Gestión de Inventario y Repuestos");
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
         lblTitulo.setForeground(new Color(44, 62, 80));
         add(lblTitulo, BorderLayout.NORTH);
 
-        // FORMULARIO (IZQUIERDA)
         JPanel panelFormulario = construirFormulario();
         add(panelFormulario, BorderLayout.WEST);
 
-        // TABLA Y BUSCADOR (DERECHA)
         JPanel panelTabla = construirPanelTabla();
         add(panelTabla, BorderLayout.CENTER);
 
-        // INICIALIZAR DATOS
         cargarCategorias();
+        cargarProveedores(); 
         cargarTabla("");
     }
 
@@ -75,191 +79,130 @@ public class PanelInventario extends javax.swing.JPanel {
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 0, 5, 0);
-        gbc.weightx = 1.0;
-        gbc.gridx = 0;
-        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.insets = new Insets(5, 0, 5, 0);
+        gbc.weightx = 1.0; gbc.gridx = 0; gbc.gridy = 0;
 
-        JLabel lblSub = new JLabel("Datos del Producto");
-        lblSub.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblSub.setForeground(Color.GRAY);
-        gbc.insets = new Insets(0, 0, 15, 0);
-        panel.add(lblSub, gbc);
+        JLabel lblSub = new JLabel("Datos del Producto"); lblSub.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblSub.setForeground(Color.GRAY); gbc.insets = new Insets(0, 0, 10, 0); panel.add(lblSub, gbc);
 
-        // Inicializar campos
-        txtCodigo = crearTextField();
+        txtCodigo = crearTextField(); 
         txtNombre = crearTextField();
-        cmbCategoria = new JComboBox<>();
-        cmbCategoria.setPreferredSize(new Dimension(0, 35));
-        txtPrecioCompra = crearTextField();
-        txtPrecioVenta = crearTextField();
-        txtStock = crearTextField();
-        txtStockMinimo = crearTextField();
-        txtStockMinimo.setText("5"); // Por defecto
+        txtUbicacion = crearTextField(); // <--- INICIALIZAR
+        
+        cmbCategoria = new JComboBox<>(); cmbCategoria.setPreferredSize(new Dimension(0, 35));
+        cmbProveedor = new JComboBox<>(); cmbProveedor.setPreferredSize(new Dimension(0, 35));
+        cmbProveedor.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        chkAplicaTecnico = new JCheckBox("Habilitar Precio de Técnico (Mayorista)");
+        chkAplicaTecnico.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+        chkAplicaTecnico.setForeground(new Color(41, 128, 185)); chkAplicaTecnico.setOpaque(false);
+        txtPrecioTecnico = crearTextField(); txtPrecioTecnico.setText("0.00"); txtPrecioTecnico.setEnabled(false); 
+        chkAplicaTecnico.addActionListener(e -> txtPrecioTecnico.setEnabled(chkAplicaTecnico.isSelected()));
+        
+        txtPrecioCompra = crearTextField(); txtPrecioVenta = crearTextField();
+        txtStock = crearTextField(); txtStockMinimo = crearTextField(); txtStockMinimo.setText("5"); 
 
-        // Agregar al panel
-        gbc.insets = new Insets(5, 0, 2, 0);
+        gbc.insets = new Insets(2, 0, 2, 0);
+        gbc.gridy++; panel.add(new JLabel("Código de Barras (Opcional):"), gbc); gbc.gridy++; panel.add(txtCodigo, gbc);
+        gbc.gridy++; panel.add(new JLabel("Nombre del Producto/Repuesto: *"), gbc); gbc.gridy++; panel.add(txtNombre, gbc);
         
-        gbc.gridy++; panel.add(new JLabel("Código de Barras (Opcional):"), gbc);
-        gbc.gridy++; panel.add(txtCodigo, gbc);
-        
-        gbc.gridy++; panel.add(new JLabel("Nombre del Producto/Repuesto: *"), gbc);
-        gbc.gridy++; panel.add(txtNombre, gbc);
-        
-        gbc.gridy++; panel.add(new JLabel("Categoría: *"), gbc);
-        gbc.gridy++; panel.add(cmbCategoria, gbc);
-        
-        JPanel panelPrecios = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
-        panelPrecios.setOpaque(false);
-        
-        JPanel pCompra = new JPanel(new BorderLayout()); pCompra.setOpaque(false);
-        pCompra.add(new JLabel("P. Compra: *"), BorderLayout.NORTH); pCompra.add(txtPrecioCompra, BorderLayout.CENTER);
-        
-        JPanel pVenta = new JPanel(new BorderLayout()); pVenta.setOpaque(false);
-        pVenta.add(new JLabel("P. Venta: *"), BorderLayout.NORTH); pVenta.add(txtPrecioVenta, BorderLayout.CENTER);
-        
-        panelPrecios.add(pCompra); panelPrecios.add(pVenta);
-        gbc.gridy++; gbc.insets = new Insets(10, 0, 5, 0); panel.add(panelPrecios, gbc);
+        // --- SECCIÓN UBICACIÓN ---
+        gbc.gridy++; panel.add(new JLabel("Ubicación Física (Ej: Vitrina 1):"), gbc); 
+        gbc.gridy++; panel.add(txtUbicacion, gbc);
 
-        JPanel panelStocks = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
-        panelStocks.setOpaque(false);
+        JPanel pCombos = new JPanel(new java.awt.GridLayout(1, 2, 10, 0)); pCombos.setOpaque(false);
+        JPanel pCat = new JPanel(new BorderLayout()); pCat.setOpaque(false); pCat.add(new JLabel("Categoría: *"), BorderLayout.NORTH); pCat.add(cmbCategoria, BorderLayout.CENTER);
+        JPanel pProv = new JPanel(new BorderLayout()); pProv.setOpaque(false); pProv.add(new JLabel("Proveedor:"), BorderLayout.NORTH); pProv.add(cmbProveedor, BorderLayout.CENTER);
+        pCombos.add(pCat); pCombos.add(pProv);
+        gbc.gridy++; panel.add(pCombos, gbc);
         
-        JPanel pStock = new JPanel(new BorderLayout()); pStock.setOpaque(false);
-        pStock.add(new JLabel("Stock Actual: *"), BorderLayout.NORTH); pStock.add(txtStock, BorderLayout.CENTER);
+        gbc.gridy++; gbc.insets = new Insets(10, 0, 2, 0); panel.add(new JLabel("P. Compra: *"), gbc);
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(txtPrecioCompra, gbc);
         
-        JPanel pMin = new JPanel(new BorderLayout()); pMin.setOpaque(false);
-        pMin.add(new JLabel("Stock Mínimo:"), BorderLayout.NORTH); pMin.add(txtStockMinimo, BorderLayout.CENTER);
-        
+        JPanel pVentas = new JPanel(new java.awt.GridLayout(1, 2, 10, 0)); pVentas.setOpaque(false);
+        JPanel pV = new JPanel(new BorderLayout()); pV.setOpaque(false); pV.add(new JLabel("P. Venta Público: *"), BorderLayout.NORTH); pV.add(txtPrecioVenta, BorderLayout.CENTER);
+        JPanel pT = new JPanel(new BorderLayout()); pT.setOpaque(false); pT.add(chkAplicaTecnico, BorderLayout.NORTH); pT.add(txtPrecioTecnico, BorderLayout.CENTER);
+        pVentas.add(pV); pVentas.add(pT);
+        gbc.gridy++; panel.add(pVentas, gbc);
+
+        JPanel panelStocks = new JPanel(new java.awt.GridLayout(1, 2, 10, 0)); panelStocks.setOpaque(false);
+        JPanel pStock = new JPanel(new BorderLayout()); pStock.setOpaque(false); pStock.add(new JLabel("Stock Actual: *"), BorderLayout.NORTH); pStock.add(txtStock, BorderLayout.CENTER);
+        JPanel pMin = new JPanel(new BorderLayout()); pMin.setOpaque(false); pMin.add(new JLabel("Stock Mínimo:"), BorderLayout.NORTH); pMin.add(txtStockMinimo, BorderLayout.CENTER);
         panelStocks.add(pStock); panelStocks.add(pMin);
-        gbc.gridy++; panel.add(panelStocks, gbc);
+        gbc.gridy++; gbc.insets = new Insets(10, 0, 5, 0); panel.add(panelStocks, gbc);
 
-        // Botones
-        btnGuardar = new JButton("Guardar Producto");
-        estilizarBoton(btnGuardar, new Color(46, 204, 113));
-        btnGuardar.addActionListener(e -> guardarProducto());
+        btnGuardar = new JButton("Guardar Producto"); estilizarBoton(btnGuardar, new Color(46, 204, 113)); btnGuardar.addActionListener(e -> guardarProducto());
+        btnActualizar = new JButton("Actualizar"); estilizarBoton(btnActualizar, new Color(52, 152, 219)); btnActualizar.setEnabled(false); btnActualizar.addActionListener(e -> actualizarProducto());
+        btnLimpiar = new JButton("Limpiar"); estilizarBoton(btnLimpiar, new Color(149, 165, 166)); btnLimpiar.addActionListener(e -> limpiarFormulario());
+        btnImprimirEtiqueta = new JButton("Imprimir Etiquetas"); estilizarBoton(btnImprimirEtiqueta, new Color(155, 89, 182)); btnImprimirEtiqueta.setEnabled(false); btnImprimirEtiqueta.addActionListener(e -> imprimirEtiquetas());
 
-        btnActualizar = new JButton("Actualizar");
-        estilizarBoton(btnActualizar, new Color(52, 152, 219));
-        btnActualizar.setEnabled(false);
-        btnActualizar.addActionListener(e -> actualizarProducto());
-
-        btnLimpiar = new JButton("Limpiar");
-        estilizarBoton(btnLimpiar, new Color(149, 165, 166));
-        btnLimpiar.addActionListener(e -> limpiarFormulario());
-        
-        // --- NUEVO BOTÓN DE ETIQUETAS ---
-        btnImprimirEtiqueta = new JButton("Imprimir Etiquetas");
-        estilizarBoton(btnImprimirEtiqueta, new Color(155, 89, 182)); // Color Morado
-        btnImprimirEtiqueta.setEnabled(false); // Apagado por defecto
-        btnImprimirEtiqueta.addActionListener(e -> imprimirEtiquetas());
-
-        gbc.gridy++; gbc.insets = new Insets(25, 0, 5, 0); panel.add(btnGuardar, gbc);
-        
-        JPanel panelAcciones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
-        panelAcciones.setOpaque(false);
-        panelAcciones.add(btnActualizar); panelAcciones.add(btnLimpiar);
-        gbc.gridy++; gbc.insets = new Insets(0, 0, 10, 0); panel.add(panelAcciones, gbc); // Cambié Insets abajo a 10
-        
-        // Agregamos el botón nuevo debajo de los otros dos
+        gbc.gridy++; gbc.insets = new Insets(15, 0, 5, 0); panel.add(btnGuardar, gbc);
+        JPanel panelAcciones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0)); panelAcciones.setOpaque(false); panelAcciones.add(btnActualizar); panelAcciones.add(btnLimpiar);
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(panelAcciones, gbc);
         gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0); panel.add(btnImprimirEtiqueta, gbc);
-
-        gbc.gridy++; gbc.weighty = 1.0;
-        panel.add(Box.createVerticalGlue(), gbc);
+        gbc.gridy++; gbc.weighty = 1.0; panel.add(Box.createVerticalGlue(), gbc);
 
         return panel;
     }
 
     private JPanel construirPanelTabla() {
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
-        panel.setOpaque(false);
-
-        // Buscador
-        JPanel panelBuscador = new JPanel(new BorderLayout(10, 0));
-        panelBuscador.setOpaque(false);
-        JLabel lblBuscar = new JLabel("Buscar Producto:");
-        lblBuscar.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        JPanel panel = new JPanel(new BorderLayout(0, 15)); panel.setOpaque(false);
+        JPanel panelBuscador = new JPanel(new BorderLayout(10, 0)); panelBuscador.setOpaque(false);
+        JLabel lblBuscar = new JLabel("Buscar Producto:"); lblBuscar.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        txtBuscar = new JTextField(); txtBuscar.setFont(new Font("Segoe UI", Font.PLAIN, 16)); txtBuscar.setPreferredSize(new Dimension(0, 40));
+        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() { public void keyReleased(java.awt.event.KeyEvent evt) { cargarTabla(txtBuscar.getText().trim()); } });
         
-        txtBuscar = new JTextField();
-        txtBuscar.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        txtBuscar.setPreferredSize(new Dimension(0, 40));
-        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyReleased(java.awt.event.KeyEvent evt) {
-                cargarTabla(txtBuscar.getText().trim());
-            }
-        });
-        
-        panelBuscador.add(lblBuscar, BorderLayout.WEST);
-        panelBuscador.add(txtBuscar, BorderLayout.CENTER);
+        panelBuscador.add(lblBuscar, BorderLayout.WEST); panelBuscador.add(txtBuscar, BorderLayout.CENTER);
 
-        // Tabla
-        tablaProductos = new JTable();
-        tablaProductos.setRowHeight(30);
-        tablaProductos.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        tablaProductos.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
-        tablaProductos.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                seleccionarProducto();
-            }
-        });
+        tablaProductos = new JTable(); tablaProductos.setRowHeight(30); tablaProductos.setFont(new Font("Segoe UI", Font.PLAIN, 14)); tablaProductos.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tablaProductos.addMouseListener(new java.awt.event.MouseAdapter() { public void mouseClicked(java.awt.event.MouseEvent evt) { seleccionarProducto(); } });
 
-        JScrollPane scroll = new JScrollPane(tablaProductos);
-        scroll.getViewport().setBackground(Color.WHITE);
-        scroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-
-        panel.add(panelBuscador, BorderLayout.NORTH);
-        panel.add(scroll, BorderLayout.CENTER);
+        JScrollPane scroll = new JScrollPane(tablaProductos); scroll.getViewport().setBackground(Color.WHITE); scroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+        panel.add(panelBuscador, BorderLayout.NORTH); panel.add(scroll, BorderLayout.CENTER);
 
         return panel;
     }
 
     private JTextField crearTextField() {
-        JTextField txt = new JTextField();
-        txt.setPreferredSize(new Dimension(0, 35));
-        txt.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JTextField txt = new JTextField(); txt.setPreferredSize(new Dimension(0, 35)); txt.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         return txt;
     }
 
     private void estilizarBoton(JButton btn, Color color) {
-        btn.setBackground(color);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btn.setPreferredSize(new Dimension(0, 40));
-        btn.setFocusPainted(false);
-        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btn.setBackground(color); btn.setForeground(Color.WHITE); btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btn.setPreferredSize(new Dimension(0, 40)); btn.setFocusPainted(false); btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     }
 
-    // =========================================================
-    // LÓGICA DE BASE DE DATOS
-    // =========================================================
-
     private void cargarCategorias() {
-        cmbCategoria.removeAllItems();
-        listaIdCategorias.clear();
-        cmbCategoria.addItem("--- Seleccione ---");
-        listaIdCategorias.add(-1);
+        cmbCategoria.removeAllItems(); listaIdCategorias.clear(); cmbCategoria.addItem("--- Seleccione ---"); listaIdCategorias.add(-1);
+        for (modelo.CategoriaProducto c : new dao.CategoriaProductoDAO().listar()) { cmbCategoria.addItem(c.getNombreCategoria()); listaIdCategorias.add(c.getIdCategoria()); }
+    }
 
-        for (modelo.CategoriaProducto c : new dao.CategoriaProductoDAO().listar()) {
-            cmbCategoria.addItem(c.getNombreCategoria());
-            listaIdCategorias.add(c.getIdCategoria());
-        }
+    private void cargarProveedores() {
+        cmbProveedor.removeAllItems();
+        modelo.Proveedor provVacio = new modelo.Proveedor(); provVacio.setIdProveedor(0); provVacio.setEmpresa("--- Sin Proveedor ---"); cmbProveedor.addItem(provVacio);
+        for(modelo.Proveedor p : new dao.ProveedorDAO().listarActivos()) { cmbProveedor.addItem(p); }
     }
 
     private void cargarTabla(String filtro) {
         List<Object[]> lista = new dao.ProductoDAO().buscarProductoCompleto(filtro);
-        DefaultTableModel modelo = new DefaultTableModel(new Object[]{"ID", "Código", "Nombre", "Categoría", "P. Compra", "P. Venta", "Stock", "Mínimo"}, 0) {
+        // --- AHORA MOSTRAMOS LA UBICACIÓN EN LA TABLA ---
+        DefaultTableModel modelo = new DefaultTableModel(new Object[]{"ID", "Código", "Nombre", "Categoría", "Ubicación", "P. Compra", "P. Venta", "Stock", "Mínimo", "ID_Prov", "AplicaTec", "P_Tecnico"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        for (Object[] fila : lista) {
-            modelo.addRow(fila);
-        }
+        for (Object[] fila : lista) { modelo.addRow(fila); }
         tablaProductos.setModel(modelo);
         
-        // Ajustar anchos
         if (tablaProductos.getColumnCount() > 0) {
             tablaProductos.getColumnModel().getColumn(0).setPreferredWidth(30);
-            tablaProductos.getColumnModel().getColumn(2).setPreferredWidth(200); // Nombre grande
+            tablaProductos.getColumnModel().getColumn(2).setPreferredWidth(200); 
+            // Ocultar las columnas internas (9, 10, 11)
+            for (int i = 9; i <= 11; i++) {
+                tablaProductos.getColumnModel().getColumn(i).setMinWidth(0);
+                tablaProductos.getColumnModel().getColumn(i).setMaxWidth(0);
+                tablaProductos.getColumnModel().getColumn(i).setWidth(0);
+            }
         }
     }
 
@@ -268,43 +211,52 @@ public class PanelInventario extends javax.swing.JPanel {
         if (fila >= 0) {
             idProductoSeleccionado = Integer.parseInt(tablaProductos.getValueAt(fila, 0).toString());
             
-            // Si el código de barras es null en BD, evitamos error
             Object codBarras = tablaProductos.getValueAt(fila, 1);
             txtCodigo.setText(codBarras != null ? codBarras.toString() : "");
             
             txtNombre.setText(tablaProductos.getValueAt(fila, 2).toString());
             cmbCategoria.setSelectedItem(tablaProductos.getValueAt(fila, 3).toString());
-            txtPrecioCompra.setText(tablaProductos.getValueAt(fila, 4).toString());
-            txtPrecioVenta.setText(tablaProductos.getValueAt(fila, 5).toString());
-            txtStock.setText(tablaProductos.getValueAt(fila, 6).toString());
-            txtStockMinimo.setText(tablaProductos.getValueAt(fila, 7).toString());
+            
+            // --- NUEVO ---
+            Object ubic = tablaProductos.getValueAt(fila, 4);
+            txtUbicacion.setText(ubic != null ? ubic.toString() : "");
+            
+            txtPrecioCompra.setText(tablaProductos.getValueAt(fila, 5).toString());
+            txtPrecioVenta.setText(tablaProductos.getValueAt(fila, 6).toString());
+            txtStock.setText(tablaProductos.getValueAt(fila, 7).toString());
+            txtStockMinimo.setText(tablaProductos.getValueAt(fila, 8).toString());
 
-            btnGuardar.setEnabled(false);
-            btnActualizar.setEnabled(true);
-            btnImprimirEtiqueta.setEnabled(true);
+            if (tablaProductos.getColumnCount() > 11) {
+                // Proveedor
+                Object objProv = tablaProductos.getValueAt(fila, 9);
+                int idProv = (objProv != null) ? Integer.parseInt(objProv.toString()) : 0;
+                for (int i = 0; i < cmbProveedor.getItemCount(); i++) {
+                    if (cmbProveedor.getItemAt(i).getIdProveedor() == idProv) { cmbProveedor.setSelectedIndex(i); break; }
+                }
+                // Checkbox y Precio Técnico
+                boolean aplicaTecnico = (boolean) tablaProductos.getValueAt(fila, 10);
+                chkAplicaTecnico.setSelected(aplicaTecnico);
+                txtPrecioTecnico.setEnabled(aplicaTecnico);
+                txtPrecioTecnico.setText(tablaProductos.getValueAt(fila, 11).toString());
+            }
+
+            btnGuardar.setEnabled(false); btnActualizar.setEnabled(true); btnImprimirEtiqueta.setEnabled(true);
         }
     }
 
     private void guardarProducto() {
         if (!validarFormulario()) return;
-
         modelo.Producto p = capturarDatosFormulario();
         dao.ProductoDAO daoProd = new dao.ProductoDAO();
-        
-        // 1. Guardamos el producto y obtenemos su ID
         int idGenerado = daoProd.insertarConId(p);
         
         if (idGenerado != -1) {
-            // 2. MAGIA: Si el código de barras venía vacío, lo auto-generamos
             if (p.getCodigoBarras() == null || p.getCodigoBarras().trim().isEmpty()) {
-                // String.format("%011d") llena de ceros a la izquierda hasta llegar a 11 dígitos
                 String codigoAutomatico = String.format("%011d", idGenerado);
                 daoProd.actualizarCodigoBarras(idGenerado, codigoAutomatico);
             }
-            
             JOptionPane.showMessageDialog(this, "Producto guardado exitosamente.");
-            limpiarFormulario();
-            cargarTabla("");
+            limpiarFormulario(); cargarTabla("");
         } else {
             JOptionPane.showMessageDialog(this, "Error al guardar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -312,14 +264,12 @@ public class PanelInventario extends javax.swing.JPanel {
 
     private void actualizarProducto() {
         if (!validarFormulario()) return;
-
         modelo.Producto p = capturarDatosFormulario();
         p.setIdProducto(idProductoSeleccionado);
         
         if (new dao.ProductoDAO().actualizar(p)) {
             JOptionPane.showMessageDialog(this, "Producto actualizado exitosamente.");
-            limpiarFormulario();
-            cargarTabla("");
+            limpiarFormulario(); cargarTabla("");
         } else {
             JOptionPane.showMessageDialog(this, "Error al actualizar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -333,10 +283,11 @@ public class PanelInventario extends javax.swing.JPanel {
         try {
             Double.parseDouble(txtPrecioCompra.getText().trim());
             Double.parseDouble(txtPrecioVenta.getText().trim());
+            if(chkAplicaTecnico.isSelected()) Double.parseDouble(txtPrecioTecnico.getText().trim());
             Integer.parseInt(txtStock.getText().trim());
             Integer.parseInt(txtStockMinimo.getText().trim());
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Los precios deben ser números (ej. 150.50) y los stocks números enteros.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Verifique que todos los precios y el stock tengan un formato numérico válido.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
             return false;
         }
         return true;
@@ -351,24 +302,62 @@ public class PanelInventario extends javax.swing.JPanel {
         p.setPrecioVenta(Double.parseDouble(txtPrecioVenta.getText().trim()));
         p.setStock(Integer.parseInt(txtStock.getText().trim()));
         p.setStockMinimo(Integer.parseInt(txtStockMinimo.getText().trim()));
+        
+        modelo.Proveedor prov = (modelo.Proveedor) cmbProveedor.getSelectedItem();
+        p.setIdProveedor(prov != null ? prov.getIdProveedor() : 0);
+        
+        p.setAplicaPrecioTecnico(chkAplicaTecnico.isSelected());
+        double pTecnico = 0.0;
+        if(chkAplicaTecnico.isSelected() && !txtPrecioTecnico.getText().trim().isEmpty()){
+            pTecnico = Double.parseDouble(txtPrecioTecnico.getText().trim());
+        }
+        p.setPrecioTecnico(pTecnico);
+        
+        // --- GUARDAMOS LA UBICACIÓN ---
+        p.setUbicacion(txtUbicacion.getText().trim());
+        
         return p;
     }
 
     private void limpiarFormulario() {
         idProductoSeleccionado = -1;
-        txtCodigo.setText("");
-        txtNombre.setText("");
-        cmbCategoria.setSelectedIndex(0);
-        txtPrecioCompra.setText("");
-        txtPrecioVenta.setText("");
-        txtStock.setText("");
-        txtStockMinimo.setText("5");
+        txtCodigo.setText(""); txtNombre.setText(""); txtUbicacion.setText("");
+        cmbCategoria.setSelectedIndex(0); cmbProveedor.setSelectedIndex(0); 
+        txtPrecioCompra.setText(""); txtPrecioVenta.setText("");
+        txtStock.setText(""); txtStockMinimo.setText("5");
         
-        btnGuardar.setEnabled(true);
-        btnActualizar.setEnabled(false);
-        btnImprimirEtiqueta.setEnabled(false);
+        chkAplicaTecnico.setSelected(false);
+        txtPrecioTecnico.setText("0.00");
+        txtPrecioTecnico.setEnabled(false);
+        
+        btnGuardar.setEnabled(true); btnActualizar.setEnabled(false); btnImprimirEtiqueta.setEnabled(false);
         tablaProductos.clearSelection();
     }
+
+    private void imprimirEtiquetas() {
+        if (idProductoSeleccionado == -1) return;
+        String codigo = txtCodigo.getText().trim();
+        if (codigo.isEmpty()) {
+            codigo = String.format("%011d", idProductoSeleccionado);
+            dao.ProductoDAO daoProd = new dao.ProductoDAO();
+            if (daoProd.actualizarCodigoBarras(idProductoSeleccionado, codigo)) {
+                txtCodigo.setText(codigo); cargarTabla(""); 
+            } else { return; }
+        }
+        String cantidadStr = JOptionPane.showInputDialog(this, "¿Cuántas etiquetas desea imprimir para este producto?", "Imprimir Etiquetas", JOptionPane.QUESTION_MESSAGE);
+        if (cantidadStr == null || cantidadStr.trim().isEmpty()) return;
+        try {
+            int cantidad = Integer.parseInt(cantidadStr.trim());
+            if (cantidad <= 0) throw new NumberFormatException();
+            String nombreProd = txtNombre.getText().trim();
+            utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta();
+            boolean exito = impresora.imprimirEtiquetasDirecto(nombreProd, codigo, cantidad);
+            if (exito) JOptionPane.showMessageDialog(this, "Se han enviado " + cantidad + " etiquetas a la impresora.", "Impresión Exitosa", JOptionPane.INFORMATION_MESSAGE);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Ingrese un número entero válido mayor a cero.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -389,48 +378,4 @@ public class PanelInventario extends javax.swing.JPanel {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
-
-    // =========================================================
-    // LÓGICA DE IMPRESIÓN DE ETIQUETAS DIRECTA
-    // =========================================================
-    private void imprimirEtiquetas() {
-        if (idProductoSeleccionado == -1) return;
-
-        String codigo = txtCodigo.getText().trim();
-        
-        // Si no tiene código, lo creamos rellenando con ceros
-        if (codigo.isEmpty()) {
-            codigo = String.format("%011d", idProductoSeleccionado);
-            dao.ProductoDAO daoProd = new dao.ProductoDAO();
-            
-            if (daoProd.actualizarCodigoBarras(idProductoSeleccionado, codigo)) {
-                txtCodigo.setText(codigo); 
-                cargarTabla(""); 
-            } else {
-                JOptionPane.showMessageDialog(this, "Error al generar un código automáticamente.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-        }
-
-        String cantidadStr = JOptionPane.showInputDialog(this, "¿Cuántas etiquetas desea imprimir para este producto?", "Imprimir Etiquetas", JOptionPane.QUESTION_MESSAGE);
-        if (cantidadStr == null || cantidadStr.trim().isEmpty()) return;
-
-        try {
-            int cantidad = Integer.parseInt(cantidadStr.trim());
-            if (cantidad <= 0) throw new NumberFormatException();
-
-            String nombreProd = txtNombre.getText().trim();
-
-            // --- LLAMAMOS A LA NUEVA IMPRESORA EN MEMORIA ---
-            utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta();
-            boolean exito = impresora.imprimirEtiquetasDirecto(nombreProd, codigo, cantidad);
-
-            if (exito) {
-                JOptionPane.showMessageDialog(this, "Se han enviado " + cantidad + " etiquetas a la impresora.", "Impresión Exitosa", JOptionPane.INFORMATION_MESSAGE);
-            }
-
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Por favor, ingrese un número entero válido mayor a cero.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
 }

@@ -490,23 +490,33 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
         int idOrden = Integer.parseInt(txtIdOrden.getText());
         String[] textosActuales = daoOrden.obtenerTextosOrden(idOrden);
 
-        JTextArea txtProblema = new JTextArea(5, 30);
+        JTextArea txtProblema = new JTextArea(4, 30);
         txtProblema.setText(textosActuales[0] != null ? textosActuales[0] : "");
         txtProblema.setLineWrap(true); txtProblema.setWrapStyleWord(true);
 
-        JTextArea txtTrabajo = new JTextArea(5, 30);
+        JTextArea txtTrabajo = new JTextArea(4, 30);
         txtTrabajo.setText(textosActuales[1] != null ? textosActuales[1] : "");
         txtTrabajo.setLineWrap(true); txtTrabajo.setWrapStyleWord(true);
 
-        JPanel panelEdicion = new JPanel(new GridLayout(4, 1, 5, 5));
+        // --- NUEVA CAJA PARA LA CLAVE ---
+        JTextField txtClave = new JTextField();
+        // Si ya hay una clave guardada (posición 2 del arreglo), la mostramos, si no, "Sin Clave"
+        txtClave.setText(textosActuales.length > 2 && textosActuales[2] != null ? textosActuales[2] : "Sin Clave");
+        txtClave.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+        // Cambiamos el Grid de 4 a 6 filas para que quepan los nuevos elementos
+        JPanel panelEdicion = new JPanel(new GridLayout(6, 1, 5, 5));
         panelEdicion.add(new JLabel("Problema Reportado:"));
         panelEdicion.add(new JScrollPane(txtProblema));
-        panelEdicion.add(new JLabel("Trabajo Realizado:"));
+        panelEdicion.add(new JLabel("Trabajo Realizado / Diagnóstico:"));
         panelEdicion.add(new JScrollPane(txtTrabajo));
+        panelEdicion.add(new JLabel("Seguridad / Clave del Dispositivo:")); // <-- Etiqueta nueva
+        panelEdicion.add(txtClave); // <-- Cajita nueva
 
         if (JOptionPane.showConfirmDialog(this, panelEdicion, "Editando Orden N° " + idOrden, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
-            if (daoOrden.actualizarTextosOrden(idOrden, txtProblema.getText().trim(), txtTrabajo.getText().trim())) {
-                JOptionPane.showMessageDialog(this, "Detalles actualizados correctamente.");
+            // Le pasamos el 3er parámetro al DAO (la clave que el usuario escribió)
+            if (daoOrden.actualizarTextosOrden(idOrden, txtProblema.getText().trim(), txtTrabajo.getText().trim(), txtClave.getText().trim())) {
+                JOptionPane.showMessageDialog(this, "Detalles y clave de seguridad actualizados.");
                 refrescarTabla();
             } else {
                 JOptionPane.showMessageDialog(this, "Error al actualizar los detalles.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -576,12 +586,15 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
                     String problema = textos[0] != null ? textos[0] : "";
                     String trabajo = textos[1] != null ? textos[1] : "";
                     
+                    // Recuperamos la clave actual para que no se borre al actualizar el estado
+                    String claveActual = textos.length > 2 && textos[2] != null ? textos[2] : "Sin Clave";
+                    
                     // Creamos la etiqueta de texto con fecha y autor
                     String fechaCambio = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new java.util.Date());
                     String notaHistorial = "\n\n[" + fechaCambio + " - Estado cambiado a '" + estado.toUpperCase() + "' por: " + firmaCambioEstado.toUpperCase() + "]";
                     
-                    // Inyectamos la nota en la base de datos
-                    daoOrden.actualizarTextosOrden(id, problema, trabajo + notaHistorial);
+                    // Inyectamos la nota en la BD (pasando la clave intacta)
+                    daoOrden.actualizarTextosOrden(id, problema, trabajo + notaHistorial, claveActual);
                 }
                 
                 JOptionPane.showMessageDialog(this, "¡Orden actualizada correctamente!");

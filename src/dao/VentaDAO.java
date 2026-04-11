@@ -55,10 +55,14 @@ public class VentaDAO {
 
             // 3. GUARDAR LOS DETALLES Y RESTAR INVENTARIO
             String sqlDetalle = "INSERT INTO detalles_venta (id_venta, id_producto, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)";
-            String sqlRestarStock = "UPDATE productos SET stock = stock - ? WHERE id_producto = ?";
+            
+            // --- NUEVO: PREPARAMOS LAS DOS RUTAS DE INVENTARIO ---
+            String sqlRestarStockNormal = "UPDATE productos SET stock = stock - ? WHERE id_producto = ?";
+            String sqlRestarStockKnijico = "UPDATE pantallas_knijico SET stock = stock - ? WHERE id_pantalla = ?";
             
             try (PreparedStatement psDetalle = con.prepareStatement(sqlDetalle);
-                 PreparedStatement psStock = con.prepareStatement(sqlRestarStock)) {
+                 PreparedStatement psStockNormal = con.prepareStatement(sqlRestarStockNormal);
+                 PreparedStatement psStockKnijico = con.prepareStatement(sqlRestarStockKnijico)) {
                 
                 for (DetalleVenta detalle : listaDetalles) {
                     // Guardar Renglón
@@ -66,12 +70,22 @@ public class VentaDAO {
                     
                     if (detalle.getIdProducto() > 0) {
                         psDetalle.setInt(2, detalle.getIdProducto());
-                        // Restar Stock solo si es un producto físico
-                        psStock.setInt(1, detalle.getCantidad());
-                        psStock.setInt(2, detalle.getIdProducto());
-                        psStock.executeUpdate();
+                        
+                        // --- LA MAGIA DE LA SEPARACIÓN ---
+                        if (detalle.getDescripcion() != null && detalle.getDescripcion().startsWith("PANTALLA KNIJICO")) {
+                            // Si es Knijico, restamos de su tabla exclusiva
+                            psStockKnijico.setInt(1, detalle.getCantidad());
+                            psStockKnijico.setInt(2, detalle.getIdProducto());
+                            psStockKnijico.executeUpdate();
+                        } else {
+                            // Si es cualquier otro producto, restamos de la tabla normal
+                            psStockNormal.setInt(1, detalle.getCantidad());
+                            psStockNormal.setInt(2, detalle.getIdProducto());
+                            psStockNormal.executeUpdate();
+                        }
+                        
                     } else {
-                        psDetalle.setNull(2, java.sql.Types.INTEGER); // Es un servicio
+                        psDetalle.setNull(2, java.sql.Types.INTEGER); // Es un servicio (ID 0)
                     }
                     
                     psDetalle.setString(3, detalle.getDescripcion());

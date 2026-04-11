@@ -9,11 +9,17 @@ public class Producto {
     private double precioVenta;
     private int stock;
     private int stockMinimo;
+    private int idProveedor; 
+    
+    private boolean aplicaPrecioTecnico;
+    private double precioTecnico;
+    
+    // --- NUEVA VARIABLE ---
+    private String ubicacion;
 
-    public Producto() {
-    }
+    public Producto() {}
 
-    public Producto(String codigoBarras, String nombreProducto, int idCategoria, double precioCompra, double precioVenta, int stock, int stockMinimo) {
+    public Producto(String codigoBarras, String nombreProducto, int idCategoria, double precioCompra, double precioVenta, int stock, int stockMinimo, int idProveedor, boolean aplicaPrecioTecnico, double precioTecnico, String ubicacion) {
         this.codigoBarras = codigoBarras;
         this.nombreProducto = nombreProducto;
         this.idCategoria = idCategoria;
@@ -21,6 +27,10 @@ public class Producto {
         this.precioVenta = precioVenta;
         this.stock = stock;
         this.stockMinimo = stockMinimo;
+        this.idProveedor = idProveedor;
+        this.aplicaPrecioTecnico = aplicaPrecioTecnico;
+        this.precioTecnico = precioTecnico;
+        this.ubicacion = ubicacion;
     }
 
     // Getters y Setters
@@ -47,4 +57,16 @@ public class Producto {
 
     public int getStockMinimo() { return stockMinimo; }
     public void setStockMinimo(int stockMinimo) { this.stockMinimo = stockMinimo; }
+
+    public int getIdProveedor() { return idProveedor; }
+    public void setIdProveedor(int idProveedor) { this.idProveedor = idProveedor; }
+
+    public boolean isAplicaPrecioTecnico() { return aplicaPrecioTecnico; }
+    public void setAplicaPrecioTecnico(boolean aplicaPrecioTecnico) { this.aplicaPrecioTecnico = aplicaPrecioTecnico; }
+
+    public double getPrecioTecnico() { return precioTecnico; }
+    public void setPrecioTecnico(double precioTecnico) { this.precioTecnico = precioTecnico; }
+
+    public String getUbicacion() { return ubicacion; }
+    public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
 }
