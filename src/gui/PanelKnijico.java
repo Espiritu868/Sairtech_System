@@ -25,9 +25,10 @@ public class PanelKnijico extends JPanel {
 
     private JComboBox<ComboItem> cmbLoteRegistro;
     private JTextField txtModelo, txtCaja, txtCosto, txtPrecioCliente, txtPrecioTecnico, txtStock;
-    private JTextField txtCodigoBarras; // <--- NUEVO
+    private JTextField txtCodigoBarras; 
     
     private JButton btnGuardar, btnActualizar, btnLimpiar;
+    private JButton btnImprimirEtiqueta; // <--- NUEVO BOTÓN
 
     public PanelKnijico() {
         dao = new KnijicoDAO();
@@ -104,7 +105,6 @@ public class PanelKnijico extends JPanel {
         panelBusqueda.add(txtBuscar, BorderLayout.CENTER);
         panelBusqueda.add(chkVerOcultas, BorderLayout.EAST);
 
-        // Columnas actualizadas: Agregamos "Codigo" al final (Index 11)
         String[] col = {"ID", "Lote", "Modelo (Ubicación)", "Costo", "P. Cliente", "P. Técnico", "Stock", "Estado", "RawM", "Caja", "IdL", "Codigo"};
         modeloTabla = new DefaultTableModel(col, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -166,7 +166,6 @@ public class PanelKnijico extends JPanel {
         txtCaja = new JTextField("1"); txtCaja.setPreferredSize(new Dimension(0, 30));
         gbc.gridy++; panel.add(txtCaja, gbc);
 
-        // --- CÓDIGO DE BARRAS ---
         gbc.gridy++; panel.add(new JLabel("Código de Barras (Opcional):"), gbc);
         txtCodigoBarras = new JTextField(); 
         txtCodigoBarras.setPreferredSize(new Dimension(0, 30));
@@ -192,19 +191,33 @@ public class PanelKnijico extends JPanel {
 
         btnGuardar = new JButton("Guardar Nueva");
         btnGuardar.setBackground(COLOR_AZUL); btnGuardar.setForeground(Color.WHITE);
+        btnGuardar.setFocusPainted(false);
         btnGuardar.addActionListener(e -> guardarPantalla());
         
         btnActualizar = new JButton("Actualizar");
         btnActualizar.setBackground(new Color(46, 204, 113)); btnActualizar.setForeground(Color.WHITE);
-        btnActualizar.setEnabled(false); btnActualizar.addActionListener(e -> actualizarDatos());
+        btnActualizar.setEnabled(false); btnActualizar.setFocusPainted(false);
+        btnActualizar.addActionListener(e -> actualizarDatos());
 
         btnLimpiar = new JButton("Limpiar");
-        btnLimpiar.setBackground(new Color(189, 195, 199)); btnLimpiar.addActionListener(e -> limpiarFormulario());
+        btnLimpiar.setBackground(new Color(189, 195, 199)); btnLimpiar.setFocusPainted(false);
+        btnLimpiar.addActionListener(e -> limpiarFormulario());
+
+        // --- BOTÓN DE IMPRIMIR ETIQUETA ---
+        btnImprimirEtiqueta = new JButton("Imprimir Etiqueta");
+        btnImprimirEtiqueta.setBackground(new Color(52, 73, 94)); // Gris oscuro elegante
+        btnImprimirEtiqueta.setForeground(Color.WHITE);
+        btnImprimirEtiqueta.setEnabled(false);
+        btnImprimirEtiqueta.setFocusPainted(false);
+        btnImprimirEtiqueta.addActionListener(e -> imprimirEtiquetaCodigo());
 
         gbc.gridy++; gbc.insets = new Insets(15, 0, 0, 0); panel.add(btnGuardar, gbc);
+        
         JPanel pAcciones = new JPanel(new GridLayout(1, 2, 5, 0)); pAcciones.setOpaque(false);
         pAcciones.add(btnActualizar); pAcciones.add(btnLimpiar);
         gbc.gridy++; gbc.insets = new Insets(5, 0, 0, 0); panel.add(pAcciones, gbc);
+        
+        gbc.gridy++; gbc.insets = new Insets(5, 0, 0, 0); panel.add(btnImprimirEtiqueta, gbc);
 
         gbc.gridy++; gbc.weighty = 1.0; panel.add(Box.createVerticalGlue(), gbc);
         return panel;
@@ -224,12 +237,13 @@ public class PanelKnijico extends JPanel {
         modeloTabla.setRowCount(0); 
         String busqueda = txtBuscar.getText().trim();
         boolean verOcultas = chkVerOcultas.isSelected();
-        int idLote = ((ComboItem) cmbFiltroLote.getSelectedItem()).getId();
+        int idLote = 0;
+        if (cmbFiltroLote.getSelectedItem() != null) {
+            idLote = ((ComboItem) cmbFiltroLote.getSelectedItem()).getId();
+        }
 
-        // Asegúrate de que KnijicoDAO.listarPantallas traiga también el código de barras en la última posición
         List<Object[]> pantallas = dao.listarPantallas(busqueda, verOcultas, idLote);
         for (Object[] p : pantallas) {
-            // El DAO ahora debe traer 12 elementos. Si no lo has modificado, p[11] será el código de barras.
             modeloTabla.addRow(new Object[]{ p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], (p.length > 11 ? p[11] : "") });
         }
     }
@@ -241,7 +255,10 @@ public class PanelKnijico extends JPanel {
             txtModelo.setText(tablaInventario.getValueAt(fila, 8).toString());
             txtCaja.setText(tablaInventario.getValueAt(fila, 9).toString());
             int idLoteOrig = Integer.parseInt(tablaInventario.getValueAt(fila, 10).toString());
-            txtCodigoBarras.setText(tablaInventario.getValueAt(fila, 11).toString()); // <--- CARGAR CÓDIGO
+            
+            // Verificamos que el código de barras no sea null antes de pintar
+            Object objCodigo = tablaInventario.getValueAt(fila, 11);
+            txtCodigoBarras.setText(objCodigo != null ? objCodigo.toString() : ""); 
             
             txtCosto.setText(tablaInventario.getValueAt(fila, 3).toString());
             txtPrecioCliente.setText(tablaInventario.getValueAt(fila, 4).toString());
@@ -253,7 +270,9 @@ public class PanelKnijico extends JPanel {
                     cmbLoteRegistro.setSelectedIndex(i); break;
                 }
             }
-            btnGuardar.setEnabled(false); btnActualizar.setEnabled(true);
+            btnGuardar.setEnabled(false); 
+            btnActualizar.setEnabled(true);
+            btnImprimirEtiqueta.setEnabled(true); // <--- ACTIVAMOS BOTÓN IMPRIMIR
         }
     }
 
@@ -298,9 +317,11 @@ public class PanelKnijico extends JPanel {
         idPantallaSeleccionada = -1;
         txtModelo.setText(""); txtCosto.setText(""); txtPrecioCliente.setText("");
         txtPrecioTecnico.setText(""); txtStock.setText(""); txtCaja.setText("1");
-        txtCodigoBarras.setText(""); // <--- LIMPIAR
+        txtCodigoBarras.setText(""); 
         tablaInventario.clearSelection();
-        btnGuardar.setEnabled(true); btnActualizar.setEnabled(false);
+        btnGuardar.setEnabled(true); 
+        btnActualizar.setEnabled(false);
+        btnImprimirEtiqueta.setEnabled(false); // <--- DESACTIVAMOS BOTÓN IMPRIMIR
     }
 
     private void alternarEstadoPantalla() {
@@ -318,6 +339,34 @@ public class PanelKnijico extends JPanel {
         if (nombre.isEmpty()) return;
         if (dao.crearLote(nombre)) {
             JOptionPane.showMessageDialog(this, "Lote creado."); txtNuevoLote.setText(""); refrescarLotes();
+        }
+    }
+
+    // --- MAGIA: MÉTODO DE IMPRESIÓN ---
+    private void imprimirEtiquetaCodigo() {
+        if (idPantallaSeleccionada == -1) return;
+        
+        String modelo = txtModelo.getText().trim();
+        String codigo = txtCodigoBarras.getText().trim();
+        String caja = txtCaja.getText().trim();
+        
+        ComboItem itemLote = (ComboItem) cmbLoteRegistro.getSelectedItem();
+        String lote = itemLote != null ? itemLote.toString() : "Lote Desconocido";
+
+        if (codigo.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Esta pantalla no tiene un código asignado. Guarde o actualice primero.");
+            return;
+        }
+
+        // --- LLAMADO A LA IMPRESIÓN DIRECTA ---
+        utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta();
+        boolean ok = impresora.imprimirEtiquetaKnijicoDirecta(modelo, codigo, lote, caja);
+        
+        if (ok) {
+            // Como la impresión es instantánea, puedes omitir este mensaje o dejarlo.
+            JOptionPane.showMessageDialog(this, "Etiqueta enviada a la impresora.", "Impresión Exitosa", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "No se pudo comunicar con la impresora.", "Error de Impresión", JOptionPane.ERROR_MESSAGE);
         }
     }
 

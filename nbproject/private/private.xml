@@ -2,6 +2,30 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/C:/SairTech_System/src/dao/KnijicoDAO.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelKnijico.java</file>
+            <file>file:/C:/SairTech_System/src/gui/VentanaPrincipal.java</file>
+            <file>file:/C:/SairTech_System/src/modelo/PantallaKnijico.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelUsuarios.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelLogin.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelPuntoVenta.java</file>
+            <file>file:/C:/SairTech_System/src/dao/VentaDAO.java</file>
+            <file>file:/C:/SairTech_System/src/modelo/Producto.java</file>
+            <file>file:/C:/SairTech_System/src/dao/ProductoDAO.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelOrdenes.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelEquipos.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelIngresoEquipos.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelEstadisticas.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelListadoOrdenes.java</file>
+            <file>file:/C:/SairTech_System/src/modelo/Proveedor.java</file>
+            <file>file:/C:/SairTech_System/src/dao/ProveedorDAO.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelProveedores.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelInventario.java</file>
+            <file>file:/C:/SairTech_System/src/dao/HistorialDAO.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelHistorialEquipos.java</file>
+            <file>file:/C:/SairTech_System/src/modelo/Expediente.java</file>
+            <file>file:/C:/SairTech_System/src/dao/OrdenReparacionDAO.java</file>
+        </group>
     </open-files>
 </project-private>

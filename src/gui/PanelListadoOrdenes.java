@@ -393,72 +393,95 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
         }
 
         int seleccion = JOptionPane.showOptionDialog(
-            this,
-            "¿Qué ticket desea reimprimir para " + cliente + " (Orden #" + idOrden + ")?",
-            "Reimpresión - SairTech",
-            JOptionPane.DEFAULT_OPTION,
-            JOptionPane.QUESTION_MESSAGE,
-            null, 
-            opciones, 
-            opciones[0]
+            this, "¿Qué ticket desea reimprimir para " + cliente + " (Orden #" + idOrden + ")?",
+            "Reimpresión - SairTech", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+            null, opciones, opciones[0]
         );
 
-        // Si el usuario presiona "Cancelar" o cierra la ventana, la selección es igual al último elemento o -1
-        if (seleccion >= 0 && seleccion < opciones.length - 1) {
-            utilidades.GeneradorPDF generador = new utilidades.GeneradorPDF();
-            
-            // 1. Intentamos la forma rápida (buscar el PDF que ya existe)
-            boolean exito = generador.reimprimirTicketExistente(idOrden, cliente, seleccion);
-            
-            // 2. EL PLAN B: Si no existe, lo regeneramos de cero
-            if (!exito) {
-                int respuesta = JOptionPane.showConfirmDialog(this,
-                    "El archivo físico ya no existe (quizás es antiguo o fue eliminado).\n¿Desea regenerarlo con los datos actuales del sistema?",
-                    "Regenerar Ticket", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                    
-                if (respuesta == JOptionPane.YES_OPTION) {
-                    try {
-                        String equipo = tablaGeneral.getValueAt(fila, 2).toString().trim();
-                        String problema = tablaGeneral.getValueAt(fila, 3).toString().trim();
-                        String costoTotal = tablaGeneral.getValueAt(fila, 5).toString().trim();
-                        int modelRow = tablaGeneral.convertRowIndexToModel(fila);
-                        String tipoEquipo = tablaGeneral.getModel().getValueAt(modelRow, 6).toString();
-                        
-                       String[] detallesBD = daoOrden.obtenerTextosOrden(Integer.parseInt(idOrden));
-                        String trabajoRealizado = (detallesBD[1] != null && !detallesBD[1].isEmpty()) ? detallesBD[1] : "Revisión técnica general.";
-                        String problemaReal = (detallesBD[0] != null && !detallesBD[0].isEmpty()) ? detallesBD[0] : problema;
-                        
-                        // --- NUEVO: Extraemos la clave y la pegamos al equipo ---
-                        String claveBD = (detallesBD[2] != null) ? detallesBD[2] : "Sin Clave";
-                        String equipoConClave = equipo + "  |  Clave: " + claveBD;
-                        // --------------------------------------------------------
-                        
-                        boolean esRecepcion = (seleccion == 0 || seleccion == 1);
-                        
-                        gui.VentanaPrincipal v = (gui.VentanaPrincipal) SwingUtilities.getWindowAncestor(this);
-                        String tecnico = (v != null) ? v.getNombreUsuarioActivo() : "SairTech";
+        // Si el usuario presiona Cancelar o cierra
+        if (seleccion < 0 || seleccion == opciones.length - 1) {
+            return;
+        }
 
-                        String fechaOriginal = daoOrden.obtenerFechaOrden(Integer.parseInt(idOrden));
-                        // Llamamos al creador de tickets en MODO SILENCIOSO
-                       boolean regenerado = generador.crearTicket(
-                            idOrden, 
-                            fechaOriginal, 
-                            cliente, equipoConClave, problemaReal, costoTotal, // <--- Mandamos equipoConClave
-                            "SAIRTECH - TECNOLOGIA", 
-                            "Santa Barbara, Barrio La Soledad, Frente a Sastreria La Elegancia", 
-                            "8951-8040", 
-                            "OJO no aplica garantia en equipos mojados, pantallas no cuentan con garantía.", 
-                            tecnico, trabajoRealizado, esRecepcion, tipoEquipo, 
-                            false // <--- FALSE: Solo guarda el archivo en la carpeta, NO ABRE NADA AÚN
-                        );
-                        
-                        if (regenerado) {
-                            // 3. AHORA SÍ: Abrimos SOLAMENTE el ticket que el usuario seleccionó
-                            generador.reimprimirTicketExistente(idOrden, cliente, seleccion);
-                        }
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(this, "Error al intentar regenerar el ticket: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        // =========================================================
+        // LÓGICA NUEVA: TICKET TÉCNICO (STICKER DIRECTO)
+        // =========================================================
+        if (seleccion == 1) {
+            int id = Integer.parseInt(idOrden);
+            String[] detallesBD = daoOrden.obtenerTextosOrden(id);
+            String problemaReal = (detallesBD[0] != null && !detallesBD[0].isEmpty()) ? detallesBD[0] : tablaGeneral.getValueAt(fila, 3).toString().trim();
+            
+            // Extraer clave
+            String claveBD = (detallesBD.length > 2 && detallesBD[2] != null) ? detallesBD[2] : "Sin Clave";
+            
+            // Detectar si es celular para imprimir código de barras
+            int modelRow = tablaGeneral.convertRowIndexToModel(fila);
+            String tipoEquipo = tablaGeneral.getModel().getValueAt(modelRow, 6).toString();
+            boolean esCelular = tipoEquipo != null && (tipoEquipo.toLowerCase().contains("celular") || tipoEquipo.toLowerCase().contains("telefono") || tipoEquipo.toLowerCase().contains("smartphone") || tipoEquipo.toLowerCase().contains("movil"));
+            
+            gui.VentanaPrincipal v = (gui.VentanaPrincipal) SwingUtilities.getWindowAncestor(this);
+            String tecnico = (v != null) ? v.getNombreUsuarioActivo() : "SairTech";
+            String equipo = tablaGeneral.getValueAt(fila, 2).toString().trim();
+            
+            // Mandamos a imprimir directo
+            utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta();
+            boolean impreso = impresora.imprimirTicketTecnicoDirecto(idOrden, cliente, equipo, problemaReal, esCelular, tecnico, claveBD);
+            
+            if (impreso) {
+                JOptionPane.showMessageDialog(this, "Sticker del técnico enviado a la impresora.", "Impresión", JOptionPane.INFORMATION_MESSAGE);
+            }
+            return; // Salimos de la función para que no abra ningún PDF
+        }
+
+        // =========================================================
+        // LÓGICA CLÁSICA: PDF DE CLIENTE (RECEPCIÓN O ENTREGA)
+        // =========================================================
+        utilidades.GeneradorPDF generador = new utilidades.GeneradorPDF();
+        boolean exito = generador.reimprimirTicketExistente(idOrden, cliente, seleccion);
+        
+        // Si no existe el PDF físicamente, lo regeneramos
+        if (!exito) {
+            int respuesta = JOptionPane.showConfirmDialog(this,
+                "El archivo físico ya no existe (quizás es antiguo o fue eliminado).\n¿Desea regenerarlo con los datos actuales del sistema?",
+                "Regenerar Ticket", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                
+            if (respuesta == JOptionPane.YES_OPTION) {
+                try {
+                    String equipo = tablaGeneral.getValueAt(fila, 2).toString().trim();
+                    String problema = tablaGeneral.getValueAt(fila, 3).toString().trim();
+                    String costoTotal = tablaGeneral.getValueAt(fila, 5).toString().trim();
+                    int modelRow = tablaGeneral.convertRowIndexToModel(fila);
+                    String tipoEquipo = tablaGeneral.getModel().getValueAt(modelRow, 6).toString();
+                    
+                    String[] detallesBD = daoOrden.obtenerTextosOrden(Integer.parseInt(idOrden));
+                    String trabajoRealizado = (detallesBD[1] != null && !detallesBD[1].isEmpty()) ? detallesBD[1] : "Revisión técnica general.";
+                    String problemaReal = (detallesBD[0] != null && !detallesBD[0].isEmpty()) ? detallesBD[0] : problema;
+                    
+                    String claveBD = (detallesBD.length > 2 && detallesBD[2] != null) ? detallesBD[2] : "Sin Clave";
+                    String equipoConClave = equipo + "  |  Clave: " + claveBD;
+                    
+                    boolean esRecepcion = (seleccion == 0);
+                    
+                    gui.VentanaPrincipal v = (gui.VentanaPrincipal) SwingUtilities.getWindowAncestor(this);
+                    String tecnico = (v != null) ? v.getNombreUsuarioActivo() : "SairTech";
+
+                    String fechaOriginal = daoOrden.obtenerFechaOrden(Integer.parseInt(idOrden));
+                    
+                    boolean regenerado = generador.crearTicket(
+                        idOrden, fechaOriginal, cliente, equipoConClave, problemaReal, costoTotal, 
+                        "SAIRTECH - TECNOLOGIA", 
+                        "Santa Barbara, Barrio La Soledad, Frente a Sastreria La Elegancia", 
+                        "8951-8040", 
+                        "OJO no aplica garantia en equipos mojados, pantallas no cuentan con garantía.", 
+                        tecnico, trabajoRealizado, esRecepcion, tipoEquipo, 
+                        false // false para no forzar abrir hasta confirmar que se creó
+                    );
+                    
+                    if (regenerado) {
+                        generador.reimprimirTicketExistente(idOrden, cliente, seleccion);
                     }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error al intentar regenerar el ticket: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         }
