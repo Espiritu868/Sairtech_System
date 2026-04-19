@@ -47,7 +47,7 @@ public class KnijicoDAO {
     // GESTIÓN DE PANTALLAS (REGISTRO Y ACTUALIZACIÓN)
     // =========================================================
 
-    public boolean registrarPantalla(int idLote, String modelo, double costo, double pCli, double pTec, int stock, int caja, String codigo) {
+public boolean registrarPantalla(int idLote, String modelo, double costo, double pCli, double pTec, int stock, int caja, String codigo) {
         String sql = "INSERT INTO pantallas_knijico (id_lote, modelo_equipo, precio_compra, precio_cliente, precio_tecnico, stock, numero_caja, codigo_barras) VALUES (?,?,?,?,?,?,?,?)";
         try (Connection con = new factory.ConexionFactory().getConexion();
              PreparedStatement ps = con.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
@@ -59,16 +59,20 @@ public class KnijicoDAO {
             ps.setDouble(5, pTec);
             ps.setInt(6, stock);
             ps.setInt(7, caja);
-            ps.setString(8, (codigo == null || codigo.isEmpty()) ? null : codigo);
+            
+            // Verificamos si vino en blanco o con espacios
+            boolean generarAutomatico = (codigo == null || codigo.trim().isEmpty());
+            ps.setString(8, generarAutomatico ? null : codigo.trim());
 
             int filas = ps.executeUpdate();
 
-            // GENERACIÓN AUTOMÁTICA DE CÓDIGO CON PREFIJO 7
-            if (filas > 0 && (codigo == null || codigo.isEmpty())) {
+            // GENERACIÓN AUTOMÁTICA DE CÓDIGO CON PREFIJO 7 (13 dígitos en total)
+            if (filas > 0 && generarAutomatico) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
                         int idGenerado = rs.getInt(1);
-                        String autoCodigo = "7" + String.format("%010d", idGenerado);
+                        // El %012d rellena con ceros hasta tener 12 números, más el 7 inicial = 13 dígitos
+                        String autoCodigo = "7" + String.format("%012d", idGenerado);
                         String updateSql = "UPDATE pantallas_knijico SET codigo_barras = ? WHERE id_pantalla = ?";
                         try (PreparedStatement psUpdate = con.prepareStatement(updateSql)) {
                             psUpdate.setString(1, autoCodigo);
@@ -86,9 +90,14 @@ public class KnijicoDAO {
     }
 
     public boolean actualizarPantalla(int id, int idLote, String modelo, double costo, double pCli, double pTec, int stock, int caja, String codigo) {
+        // Generación automática si el campo viene vacío al actualizar
+        boolean generarAutomatico = (codigo == null || codigo.trim().isEmpty());
+        String codigoFinal = generarAutomatico ? ("7" + String.format("%012d", id)) : codigo.trim();
+
         String sql = "UPDATE pantallas_knijico SET id_lote=?, modelo_equipo=?, precio_compra=?, precio_cliente=?, precio_tecnico=?, stock=?, numero_caja=?, codigo_barras=? WHERE id_pantalla=?";
         try (Connection con = new factory.ConexionFactory().getConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
+            
             ps.setInt(1, idLote);
             ps.setString(2, modelo);
             ps.setDouble(3, costo);
@@ -96,15 +105,15 @@ public class KnijicoDAO {
             ps.setDouble(5, pTec);
             ps.setInt(6, stock);
             ps.setInt(7, caja);
-            ps.setString(8, codigo);
+            ps.setString(8, codigoFinal);
             ps.setInt(9, id);
+            
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             System.err.println("Error al actualizar pantalla: " + e.getMessage());
             return false;
         }
     }
-
     // =========================================================
     // LISTADO Y BÚSQUEDA
     // =========================================================

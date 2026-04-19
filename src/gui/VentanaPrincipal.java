@@ -13,6 +13,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     
     public VentanaPrincipal() {
         initComponents();
+        setIconImage(java.awt.Toolkit.getDefaultToolkit().getImage(getClass().getResource("/image/logo.png")));
         this.setLocationRelativeTo(null);
         aplicarDisenoPrincipal();
         this.setExtendedState(javax.swing.JFrame.MAXIMIZED_BOTH);
@@ -73,7 +74,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private void seleccionarBotonMenu(javax.swing.JButton botonActivo) {
         javax.swing.JButton[] todosLosBotones = {
             btnIngresoEquipos, btnControlOrdenes, btnEntregaEquipos, 
-            btnPuntoVenta, btnInventario, btnProveedores, 
+            btnPuntoVenta, btnInventario, btnProveedores, btnHistorialVentas, // <--- 4. AGREGA LA VARIABLE AQUÍ
             btnClientes, btnHistorialEquipos, 
             btnDashboard, btnGestionUsuarios,
             btnPanelKnijico
@@ -215,6 +216,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         btnPuntoVenta = new javax.swing.JButton("Punto de Venta");
         btnInventario = new javax.swing.JButton("Inventario");
         btnProveedores = new javax.swing.JButton("Proveedores");
+        btnHistorialVentas = new javax.swing.JButton("Historial de Recibos");
         
         btnClientes = new javax.swing.JButton("Directorio Clientes");
         btnHistorialEquipos = new javax.swing.JButton("Historial Equipos");
@@ -245,8 +247,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         // --- CREAR LAS CATEGORÍAS (ACORDEONES) ---
         // Usamos texto limpio en lugar de emojis problemáticos
         javax.swing.JPanel catTaller = crearMenuColapsable("[ Taller y Servicios ]", true, btnIngresoEquipos, btnControlOrdenes, btnEntregaEquipos);
+        javax.swing.JPanel catDirectorios = crearMenuColapsable("[ Directorios ]", false, btnClientes, btnHistorialEquipos, btnHistorialVentas);
         javax.swing.JPanel catVentas = crearMenuColapsable("[ Ventas e Inventario ]", false, btnPuntoVenta, btnInventario, btnProveedores);
-        javax.swing.JPanel catDirectorios = crearMenuColapsable("[ Directorios ]", false, btnClientes, btnHistorialEquipos);
         
         
         panelCategoriaAdmin = crearMenuColapsable("[ Administración ]", false, btnDashboard, btnGestionUsuarios);
@@ -388,9 +390,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         seleccionarBotonMenu(btnDashboard);
     }
     
-    private void btnInventarioActionPerformed(java.awt.event.ActionEvent evt) {                                            
+    private void btnInventarioActionPerformed(java.awt.event.ActionEvent evt) {                                             
         mostrarPanel(new PanelInventario());
         seleccionarBotonMenu(btnInventario);
+    }
+    
+    private void btnHistorialVentasActionPerformed(java.awt.event.ActionEvent evt) {                                             
+        mostrarPanel(new PanelHistorialRecibos());
+        seleccionarBotonMenu(btnHistorialVentas);
     }
     
     private void btnPuntoVentaActionPerformed(java.awt.event.ActionEvent evt) {                                            
@@ -483,6 +490,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         btnPuntoVenta.addActionListener(this::btnPuntoVentaActionPerformed);
         btnInventario.addActionListener(this::btnInventarioActionPerformed);
         btnProveedores.addActionListener(this::btnProveedoresActionPerformed);
+        btnHistorialVentas.addActionListener(this::btnHistorialVentasActionPerformed);
         
         btnClientes.addActionListener(this::btnClientesActionPerformed);
         
@@ -508,6 +516,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JButton btnPuntoVenta;
     private javax.swing.JButton btnInventario;
     private javax.swing.JButton btnProveedores;
+    private javax.swing.JButton btnHistorialVentas;
     // Módulo 3
     private javax.swing.JButton btnClientes;
     private javax.swing.JButton btnHistorialEquipos;

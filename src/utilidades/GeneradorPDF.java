@@ -7,6 +7,7 @@ import com.itextpdf.text.pdf.draw.LineSeparator;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.awt.Desktop;
+import javax.swing.JOptionPane; // Importación añadida para las alertas
 
 public class GeneradorPDF {
 
@@ -36,7 +37,8 @@ public class GeneradorPDF {
                 }
             }
 
-            String rutaBase = System.getProperty("user.dir") + File.separator + "Tickets_Sairtech";
+            // CORRECCIÓN 1: Usamos user.home en lugar de user.dir para evitar problemas de permisos en red
+            String rutaBase = System.getProperty("user.home") + File.separator + "Tickets_Sairtech";
             String subCarpetaCliente = esRecepcion ? "Recepciones" : "Entregas";
             File dirCliente = new File(rutaBase + File.separator + subCarpetaCliente);
             if (!dirCliente.exists()) dirCliente.mkdirs();
@@ -69,6 +71,11 @@ public class GeneradorPDF {
 
         } catch (Exception e) {
             System.err.println("Error crítico en GeneradorPDF: " + e.getMessage());
+            // CORRECCIÓN 2: Mostrar el error en pantalla para saber exactamente qué falla
+            JOptionPane.showMessageDialog(null, 
+                "No se pudo generar el PDF. Detalle del error:\n" + e.getMessage(), 
+                "Error de Archivo PDF", 
+                JOptionPane.ERROR_MESSAGE);
             return false;
         }
     }
@@ -119,7 +126,6 @@ public class GeneradorPDF {
 
         tablaInfo.addCell(crearCeldaInvalida("SEGURIDAD:", fuenteEtiqueta));
         
-        // DIBUJO DEL PATRÓN CORREGIDO
         if (claveExtraida.toLowerCase().contains("patr") || claveExtraida.equalsIgnoreCase("p") || claveExtraida.equalsIgnoreCase("patron")) {
             tablaInfo.addCell(crearCeldaInvalida("DIBUJAR PATRÓN:\n\n  O    O    O\n\n  O    O    O\n\n  O    O    O", fuenteDato));
         } else {
@@ -246,14 +252,20 @@ public class GeneradorPDF {
         String clienteLimpio = cliente.replace(" ", "_");
         String nombreArchivo = "Ticket_" + nroOrden + "_" + clienteLimpio + "_CLIENTE.pdf";
         
-        String rutaBase = System.getProperty("user.dir") + File.separator + "Tickets_Sairtech";
+        // CORRECCIÓN 3: También usamos user.home aquí para poder encontrar y reimprimir los tickets
+        String rutaBase = System.getProperty("user.home") + File.separator + "Tickets_Sairtech";
         File archivo = new File(rutaBase + File.separator + subCarpeta + File.separator + nombreArchivo);
 
         if (archivo.exists()) {
             try {
                 Desktop.getDesktop().open(archivo);
                 return true;
-            } catch (Exception e) { return false; }
+            } catch (Exception e) { 
+                JOptionPane.showMessageDialog(null, "Error al intentar abrir el ticket:\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                return false; 
+            }
+        } else {
+            JOptionPane.showMessageDialog(null, "No se encontró el archivo PDF para este ticket.\nRuta buscada: " + archivo.getAbsolutePath(), "Archivo no encontrado", JOptionPane.WARNING_MESSAGE);
         }
         return false;
     }

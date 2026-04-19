@@ -12,6 +12,7 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
     
     private OrdenReparacionDAO daoOrden = new OrdenReparacionDAO();
     private String firmaCambioEstado = ""; // <--- NUEVA VARIABLE PARA GUARDAR QUIEN FIRMA
+    private JCheckBox chkVerEliminados;
 
     public PanelListadoOrdenes() {
         initComponents();
@@ -43,7 +44,12 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
     }
 
     public void refrescarTabla() {
-        cargarTabla(daoOrden.listarReporteCompleto());
+        boolean mostrarEliminados = chkVerEliminados.isSelected();
+        cargarTabla(daoOrden.listarReporteCompleto(mostrarEliminados));
+        
+        // Cambiar el texto del botón eliminar según el modo
+        btnEliminar.setText(mostrarEliminados ? "Restaurar Orden" : "Eliminar");
+        btnEliminar.setBackground(mostrarEliminados ? new Color(46, 204, 113) : new Color(231, 76, 60));
     }
 
     private void configurarColumnas() {
@@ -160,6 +166,14 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
         JButton btnReimprimir = new JButton("Reimprimir [T]");
         estilizarBoton(btnReimprimir, new Color(243, 156, 18)); // Color Naranja/Amarillo
         btnReimprimir.addActionListener(evt -> btnReimprimirActionPerformed(evt));
+        
+        chkVerEliminados = new JCheckBox("Ver Papelera");
+        chkVerEliminados.setOpaque(false);
+        chkVerEliminados.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        chkVerEliminados.addActionListener(e -> refrescarTabla()); // Al marcarlo, la tabla cambia sola
+
+        panelHerramientas.add(chkVerEliminados); // Agrégalo junto a los otros filtros
+        panelHerramientas.add(new JLabel("🔍"));
 
         gbc.insets = new Insets(20, 0, 0, 0);
         gbc.gridy = 10; panelGestion.add(btnActualizarOrden, gbc);
@@ -332,7 +346,14 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
     private void cmbFiltroEstadoItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cmbFiltroEstadoItemStateChanged
         if (evt.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
             String filtro = cmbFiltroEstado.getSelectedItem().toString();
-            cargarTabla(filtro.equals("Todos") ? daoOrden.listarReporteCompleto() : daoOrden.filtrarPorEstado(filtro));
+            
+            // Leemos si el usuario está viendo las órdenes activas o la papelera
+            boolean verEliminados = chkVerEliminados.isSelected(); 
+            
+            // Mandamos ese booleano a cualquiera de las dos rutas
+            cargarTabla(filtro.equals("Todos") ? 
+                        daoOrden.listarReporteCompleto(verEliminados) : 
+                        daoOrden.filtrarPorEstado(filtro, verEliminados));
         }
     }//GEN-LAST:event_cmbFiltroEstadoItemStateChanged
 
@@ -549,7 +570,8 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
 
     private void txtBuscarOrdenKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtBuscarOrdenKeyReleased
         String texto = txtBuscarOrden.getText().trim();
-        cargarTabla(texto.isEmpty() ? daoOrden.listarReporteCompleto() : daoOrden.buscarOrden(texto));
+        cargarTabla(texto.isEmpty() ? daoOrden.listarReporteCompleto(chkVerEliminados.isSelected()) 
+                                    : daoOrden.buscarOrden(texto, chkVerEliminados.isSelected()));
     }//GEN-LAST:event_txtBuscarOrdenKeyReleased
 
     private void tablaGeneralMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tablaGeneralMouseClicked
@@ -633,21 +655,25 @@ public class PanelListadoOrdenes extends javax.swing.JPanel {
     }//GEN-LAST:event_btnActualizarOrdenActionPerformed
 
     private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
-        if (txtIdOrden.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Por favor, seleccione una orden de la tabla para eliminarla.", "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+        if (txtIdOrden.getText().isEmpty()) return;
+        int id = Integer.parseInt(txtIdOrden.getText());
+        boolean esModoPapelera = chkVerEliminados.isSelected();
 
-        if (JOptionPane.showConfirmDialog(this, "¿Está seguro de que desea eliminar la Orden N° " + txtIdOrden.getText() + "?\nEsta acción no se puede deshacer.", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
-            int id = Integer.parseInt(txtIdOrden.getText());
-            if (daoOrden.eliminar(id)) {
-                JOptionPane.showMessageDialog(this, "Orden eliminada exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                txtIdOrden.setText("");
-                cmbNuevoEstado.setSelectedIndex(0);
-                txtCostoFinal.setText("");
+        if (esModoPapelera) {
+            // Lógica de Restaurar
+            if (daoOrden.restaurar(id)) {
+                JOptionPane.showMessageDialog(this, "Orden restaurada correctamente.");
                 refrescarTabla();
-            } else {
-                JOptionPane.showMessageDialog(this, "Error al eliminar la orden.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            // Lógica de Ocultar (Borrado lógico)
+            int resp = JOptionPane.showConfirmDialog(this, "¿Ocultar esta orden?", "Confirmar", JOptionPane.YES_NO_OPTION);
+            if (resp == JOptionPane.YES_OPTION) {
+                if (daoOrden.eliminar(id)) {
+                    JOptionPane.showMessageDialog(this, "Orden enviada a la papelera.");
+                    txtIdOrden.setText("");
+                    refrescarTabla();
+                }
             }
         }
     }//GEN-LAST:event_btnEliminarActionPerformed

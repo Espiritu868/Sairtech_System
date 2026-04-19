@@ -447,7 +447,6 @@ public class PanelPuntoVenta extends JPanel {
         modelo.Producto p = daoProd.buscarPorCodigo(codigo);
 
         if (p != null) {
-            // Lógica para productos normales (Ya la tienes)
             if (p.getStock() <= 0) {
                 JOptionPane.showMessageDialog(this, "¡Sin Stock!", "Agotado", JOptionPane.ERROR_MESSAGE);
             } else {
@@ -464,7 +463,6 @@ public class PanelPuntoVenta extends JPanel {
         else {
             // 2. Si no es producto, probamos buscar en Pantallas Knijico
             dao.KnijicoDAO daoK = new dao.KnijicoDAO();
-            // Necesitamos un método en KnijicoDAO que busque por código, lo haremos en el siguiente paso
             Object[] pantalla = daoK.buscarPorCodigoBarra(codigo); 
 
             if (pantalla != null) {
@@ -477,7 +475,6 @@ public class PanelPuntoVenta extends JPanel {
                     double precio = chkPrecioTecnico.isSelected() ? (double) pantalla[5] : (double) pantalla[4];
                     String desc = "PANTALLA KNIJICO: " + pantalla[2];
                     
-                    // Aplicamos el ID VIRTUAL para evitar conflictos en el carrito
                     agregarAlCarrito(70000 + idReal, desc, 1, precio, stock);
                 }
             } else {
@@ -569,6 +566,11 @@ public class PanelPuntoVenta extends JPanel {
                 tablaPendientes.setEnabled(true);
                 tablaPendientes.setBackground(Color.WHITE);
                 tablaPendientes.setForeground(Color.BLACK);
+                
+                // --- RESTAURAR CLIENTE ---
+                idClienteSeleccionado = 0;
+                txtClienteAsignado.setText("Consumidor Final");
+                // -------------------------
             }
             
             // ELIMINACIÓN FÍSICA
@@ -606,6 +608,14 @@ public class PanelPuntoVenta extends JPanel {
         if (ord[4].toString().equalsIgnoreCase("Entregado")) return;
 
         idOrdenVinculada = Integer.parseInt(ord[0].toString());
+        
+        // --- MAGIA: ASIGNAR CLIENTE AUTOMÁTICAMENTE ---
+        txtClienteAsignado.setText(ord[1].toString()); // ord[1] es el nombre completo
+        if (ord.length > 7 && ord[7] != null) {
+            idClienteSeleccionado = Integer.parseInt(ord[7].toString()); // ord[7] es el id_cliente
+        }
+        // ----------------------------------------------
+
         agregarAlCarrito(0, "Orden #" + idOrdenVinculada + " - Rep: " + ord[2], 1, Double.parseDouble(ord[5].toString()), 1); 
         
         txtBuscarOrden.setText(""); txtBuscarOrden.setEnabled(false); btnVincularOrden.setEnabled(false);
@@ -617,20 +627,37 @@ public class PanelPuntoVenta extends JPanel {
 
     private void procesarCobroFinal() {
         if (modeloCarrito.getRowCount() == 0) return;
+        
         if (cmbMetodoPago.getSelectedItem().toString().equals("Efectivo")) {
             String pagoStr = JOptionPane.showInputDialog(this, "Total: L. " + totalVenta + "\n¿Efectivo Recibido?");
             if (pagoStr == null) return; 
             try {
                 double pago = Double.parseDouble(pagoStr);
-                if (pago < totalVenta) return;
+                if (pago < totalVenta) {
+                    JOptionPane.showMessageDialog(this, "Pago insuficiente.");
+                    return;
+                }
                 JOptionPane.showMessageDialog(this, "Cambio: L. " + String.format("%.2f", (pago - totalVenta)));
             } catch (Exception e) { return; }
         }
 
+        // --- SOLICITAR FIRMA ANTES DE COBRAR ---
+        String[] datosFirma = solicitarFirmaUsuario();
+        if (datosFirma == null) {
+            return; // Si cancela o pone mal la clave, se aborta el cobro
+        }
+        int idCajeroFirma = Integer.parseInt(datosFirma[0]);
+        String nombreCajeroFirma = datosFirma[1];
+        // ---------------------------------------
+
         btnCobrar.setEnabled(false); setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR));
-        VentanaPrincipal v = (VentanaPrincipal) SwingUtilities.getWindowAncestor(this);
+        
         modelo.Venta venta = new modelo.Venta();
-        venta.setIdCliente(idClienteSeleccionado); venta.setIdUsuario(v.getIdUsuarioActivo()); 
+        venta.setIdCliente(idClienteSeleccionado); 
+        
+        // AQUÍ REEMPLAZAMOS EL USUARIO ACTIVO POR EL QUE ACABA DE FIRMAR
+        venta.setIdUsuario(idCajeroFirma); 
+        
         venta.setIdOrden(idOrdenVinculada); venta.setTotal(totalVenta); 
         venta.setMetodoPago(cmbMetodoPago.getSelectedItem().toString());
 
@@ -639,7 +666,6 @@ public class PanelPuntoVenta extends JPanel {
             modelo.DetalleVenta dv = new modelo.DetalleVenta();
             int idCarrito = Integer.parseInt(modeloCarrito.getValueAt(i, 0).toString());
             
-            // --- AQUÍ SE LE QUITA EL "DISFRAZ" AL ID ANTES DE GUARDAR EN BD ---
             if (idCarrito >= 70000) {
                 dv.setIdProducto(idCarrito - 70000); // ID Real de Knijico
             } else {
@@ -657,10 +683,59 @@ public class PanelPuntoVenta extends JPanel {
         int idRecibo = daoVenta.registrarVentaCompleta(venta, listaDetalles);
 
         if (idRecibo != -1) {
-            JOptionPane.showMessageDialog(this, "¡Éxito!\nTransacción #" + idRecibo);
-            utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta(); 
-            impresora.imprimirReciboVenta(idRecibo);
+            JOptionPane.showMessageDialog(this, "¡Éxito!\nTransacción #" + idRecibo + "\nCajero/Técnico: " + nombreCajeroFirma.toUpperCase());
             
+            if (idOrdenVinculada != -1) {
+                // MODO ENTREGA DE TALLER: GENERAR EL PDF TAMAÑO CARTA Y MARCAR ENTREGADO
+                try {
+                    dao.OrdenReparacionDAO daoOrden = new dao.OrdenReparacionDAO();
+                    String[] textos = daoOrden.obtenerTextosOrden(idOrdenVinculada);
+                    String fallaOr = (textos[0] != null && !textos[0].isEmpty()) ? textos[0] : "Revisión general";
+                    String trabOr = (textos[1] != null && !textos[1].isEmpty()) ? textos[1] : "Revisión técnica general.";
+                    String claveOr = (textos.length > 2 && textos[2] != null) ? textos[2] : "Sin Clave";
+                    String fechaOr = daoOrden.obtenerFechaOrden(idOrdenVinculada);
+                    
+                    String cliOr = txtClienteAsignado.getText();
+                    String modOr = "";
+                    String tipoOr = "";
+                    
+                    String q = "SELECT e.modelo FROM ordenes_reparacion o JOIN equipos_registrados e ON o.id_equipo = e.id_equipo WHERE o.id_orden = ?";
+                    try (java.sql.Connection con = new factory.ConexionFactory().getConexion();
+                         java.sql.PreparedStatement ps = con.prepareStatement(q)) {
+                        ps.setInt(1, idOrdenVinculada);
+                        try (java.sql.ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) modOr = rs.getString("modelo");
+                        }
+                    }
+                    
+                    String equipoConClave = modOr + "  |  Clave: " + claveOr;
+                    
+                    // EL PDF AHORA IMPRIME EL NOMBRE DEL QUE PUSO LA CLAVE
+                    String tecnico = nombreCajeroFirma; 
+                    
+                    utilidades.GeneradorPDF generador = new utilidades.GeneradorPDF();
+                    generador.crearTicket(
+                        String.valueOf(idOrdenVinculada), fechaOr, cliOr, equipoConClave, fallaOr, String.valueOf(totalVenta),
+                        "SAIRTECH - TECNOLOGIA", "Santa Barbara, Barrio La Soledad, Frente a Sastreria La Elegancia", "8951-8040",
+                        "OJO no aplica garantia en equipos mojados, pantallas no cuentan con garantía.",
+                        tecnico, trabOr, false, tipoOr, true
+                    );
+                    
+                    // Actualizamos la orden y REGISTRAMOS QUIÉN ENTREGÓ
+                    daoOrden.actualizarEstadoYCosto(idOrdenVinculada, "Entregado", totalVenta);
+                    daoOrden.marcarComoEntregado(idOrdenVinculada, idCajeroFirma);
+
+                } catch (Exception ex) {
+                    System.err.println("Error al crear PDF de entrega: " + ex.getMessage());
+                }
+            } else {
+                // MODO VENTA MOSTRADOR: RECIBO TÉRMICO PEQUEÑO
+                // Como VentaDAO guardó el ID de quien firmó, ImpresoraDirecta sacará su nombre automáticamente en el ticket
+                utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta(); 
+                impresora.imprimirReciboVenta(idRecibo);
+            }
+            
+            // --- RESETEO DE CARRITO ---
             modeloCarrito.setRowCount(0); recalcularTotal();
             idOrdenVinculada = -1; txtBuscarOrden.setEnabled(true); btnVincularOrden.setEnabled(true);
             tablaPendientes.setEnabled(true); tablaPendientes.setBackground(Color.WHITE); tablaPendientes.setForeground(Color.BLACK);
@@ -669,6 +744,32 @@ public class PanelPuntoVenta extends JPanel {
             if(modoActual.equals("MOSTRADOR")) txtCodigoBarras.requestFocus(); else txtBuscarOrden.requestFocus();
         }
         btnCobrar.setEnabled(true); setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+    }
+    
+    private String[] solicitarFirmaUsuario() {
+        javax.swing.JPasswordField txtPass = new javax.swing.JPasswordField();
+        Object[] mensaje = {"Ingrese su PIN / Contraseña para autorizar:", txtPass};
+
+        int opcion = JOptionPane.showConfirmDialog(this, mensaje, "Firma de Cajero / Técnico", 
+                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+                     
+        if (opcion == JOptionPane.OK_OPTION) {
+            String clave = new String(txtPass.getPassword());
+            dao.UsuarioDAO daoUsuario = new dao.UsuarioDAO();
+            
+            // Buscamos quién es el dueño de esa contraseña
+            String nombreTecnico = daoUsuario.obtenerUsuarioPorClave(clave);
+            
+            if (nombreTecnico != null) {
+                // Obtenemos su ID para guardarlo en la base de datos
+                int idTecnico = daoUsuario.obtenerIdPorNombre(nombreTecnico);
+                return new String[]{String.valueOf(idTecnico), nombreTecnico}; 
+            } else {
+                JOptionPane.showMessageDialog(this, "Contraseña incorrecta o no registrada.", "Acceso Denegado", JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
+        }
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -690,4 +791,6 @@ public class PanelPuntoVenta extends JPanel {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
+
+
 }

@@ -8,6 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 public class VentaDAO {
@@ -68,22 +69,24 @@ public class VentaDAO {
                     // Guardar Renglón
                     psDetalle.setInt(1, idVentaGenerado);
                     
-                    if (detalle.getIdProducto() > 0) {
-                        psDetalle.setInt(2, detalle.getIdProducto());
+                    int idProductoVenta = detalle.getIdProducto();
+                    
+                    if (idProductoVenta > 0) {
+                        psDetalle.setInt(2, idProductoVenta); // Guardamos el ID tal cual (puede ser 70005)
                         
-                        // --- LA MAGIA DE LA SEPARACIÓN ---
-                        if (detalle.getDescripcion() != null && detalle.getDescripcion().startsWith("PANTALLA KNIJICO")) {
-                            // Si es Knijico, restamos de su tabla exclusiva
+                        // --- LA MAGIA MATEMÁTICA PARA SEPARAR EL STOCK ---
+                        if (idProductoVenta >= 70000) {
+                            // ES PANTALLA KNIJICO: Descubrimos su ID real restando 70000
+                            int idRealKnijico = idProductoVenta - 70000;
                             psStockKnijico.setInt(1, detalle.getCantidad());
-                            psStockKnijico.setInt(2, detalle.getIdProducto());
+                            psStockKnijico.setInt(2, idRealKnijico);
                             psStockKnijico.executeUpdate();
                         } else {
-                            // Si es cualquier otro producto, restamos de la tabla normal
+                            // ES PRODUCTO NORMAL
                             psStockNormal.setInt(1, detalle.getCantidad());
-                            psStockNormal.setInt(2, detalle.getIdProducto());
+                            psStockNormal.setInt(2, idProductoVenta);
                             psStockNormal.executeUpdate();
                         }
-                        
                     } else {
                         psDetalle.setNull(2, java.sql.Types.INTEGER); // Es un servicio (ID 0)
                     }
@@ -129,5 +132,55 @@ public class VentaDAO {
                 System.err.println("Error al cerrar conexión: " + e.getMessage());
             }
         }
+    }
+    
+    // =========================================================================
+    // LISTAR HISTORIAL DE VENTAS (SOLO MOSTRADOR, EXCLUYE TALLER)
+    // =========================================================================
+    public List<Object[]> listarHistorialVentas(String busqueda) {
+        List<Object[]> lista = new ArrayList<>();
+        
+        // Hacemos que el WHERE busque coincidencias, PERO exigiendo que id_orden sea NULL
+        String sql = "SELECT v.id_venta, v.fecha_venta, " +
+                     "IFNULL(CONCAT(c.nombre, ' ', c.apellido), 'Consumidor Final') AS cliente, " +
+                     "v.total, v.metodo_pago, u.usuario " +
+                     "FROM ventas v " +
+                     "LEFT JOIN clientes c ON v.id_cliente = c.id_cliente " +
+                     "JOIN usuarios u ON v.id_usuario = u.id_usuario " +
+                     "WHERE v.id_orden IS NULL AND (" +  // <--- EL FILTRO MÁGICO Y LOS PARÉNTESIS
+                     "v.id_venta LIKE ? " +
+                     "OR v.fecha_venta LIKE ? " +
+                     "OR IFNULL(CONCAT(c.nombre, ' ', c.apellido), 'Consumidor Final') LIKE ? " +
+                     "OR CAST(v.total AS CHAR) LIKE ? " +
+                     "OR v.metodo_pago LIKE ? " +
+                     "OR u.usuario LIKE ?) " +
+                     "ORDER BY v.id_venta DESC";
+
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+             
+            String param = "%" + busqueda + "%";
+            
+            // Como son 6 signos de interrogación (?), usamos un ciclo rápido para llenarlos todos
+            for (int i = 1; i <= 6; i++) {
+                ps.setString(i, param);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(new Object[]{
+                        rs.getInt("id_venta"),
+                        rs.getString("fecha_venta"),
+                        rs.getString("cliente"),
+                        rs.getDouble("total"),
+                        rs.getString("metodo_pago"),
+                        rs.getString("usuario")
+                    });
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al listar historial de ventas: " + e.getMessage());
+        }
+        return lista;
     }
 }

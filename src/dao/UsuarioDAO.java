@@ -37,12 +37,16 @@ public class UsuarioDAO {
     }
 
     public String validarLogin(String usuario, String passwordReal) {
-        String sql = "SELECT rol FROM Usuarios WHERE usuario = ? AND password_hash = ?";
+        // CORREGIDO: usuarios en minúscula
+        String sql = "SELECT rol FROM usuarios WHERE usuario = ? AND password_hash = ?";
         
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
              
             String passwordEncriptado = encriptarContraseña(passwordReal);
+            
+            System.out.println("DEBUG - Usuario ingresado: " + usuario);
+            System.out.println("DEBUG - Hash generado por Java: " + passwordEncriptado);    
             
             comando.setString(1, usuario);
             comando.setString(2, passwordEncriptado);
@@ -61,7 +65,8 @@ public class UsuarioDAO {
     
     public List<Usuario> listarUsuarios() {
         List<Usuario> lista = new ArrayList<>();
-        String sql = "SELECT id_usuario, usuario, rol FROM Usuarios";
+        // CORREGIDO: usuarios en minúscula
+        String sql = "SELECT id_usuario, usuario, rol FROM usuarios";
         
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql);
@@ -81,7 +86,8 @@ public class UsuarioDAO {
     }
 
     public boolean registrarUsuario(String usuario, String passwordReal, String rol) {
-        String sql = "INSERT INTO Usuarios (usuario, password_hash, rol) VALUES (?, ?, ?)";
+        // CORREGIDO: usuarios en minúscula
+        String sql = "INSERT INTO usuarios (usuario, password_hash, rol) VALUES (?, ?, ?)";
         
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
@@ -106,7 +112,8 @@ public class UsuarioDAO {
             return false; 
         }
 
-        String sql = "DELETE FROM Usuarios WHERE id_usuario = ?";
+        // CORREGIDO: usuarios en minúscula
+        String sql = "DELETE FROM usuarios WHERE id_usuario = ?";
         
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
@@ -124,10 +131,11 @@ public class UsuarioDAO {
         String sql;
         boolean cambiarPassword = !passwordReal.isEmpty();
 
+        // CORREGIDO: usuarios en minúscula
         if (cambiarPassword) {
-            sql = "UPDATE Usuarios SET usuario = ?, password_hash = ?, rol = ? WHERE id_usuario = ?";
+            sql = "UPDATE usuarios SET usuario = ?, password_hash = ?, rol = ? WHERE id_usuario = ?";
         } else {
-            sql = "UPDATE Usuarios SET usuario = ?, rol = ? WHERE id_usuario = ?";
+            sql = "UPDATE usuarios SET usuario = ?, rol = ? WHERE id_usuario = ?";
         }
 
         try (Connection conexion = factory.getConexion();
@@ -170,14 +178,10 @@ public class UsuarioDAO {
         return 0; 
     }
 
-    // ==============================================================================
-    // NUEVOS MÉTODOS PARA LA AUDITORÍA Y FIRMA RÁPIDA (PIN)
-    // ==============================================================================
-
-    // 1. Busca el nombre del usuario usando SOLO su contraseña (encriptándola primero)
     public String obtenerUsuarioPorClave(String passwordReal) {
         String usuario = null;
-        String sql = "SELECT usuario FROM Usuarios WHERE password_hash = ?"; 
+        // CORREGIDO: usuarios en minúscula
+        String sql = "SELECT usuario FROM usuarios WHERE password_hash = ?"; 
         
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
@@ -196,9 +200,9 @@ public class UsuarioDAO {
         return usuario;
     }
 
-    // 2. Verifica si una contraseña ya existe (encriptándola primero para buscarla)
     public boolean existeClave(String passwordReal) {
-        String sql = "SELECT COUNT(*) FROM Usuarios WHERE password_hash = ?";
+        // CORREGIDO: usuarios en minúscula
+        String sql = "SELECT COUNT(*) FROM usuarios WHERE password_hash = ?";
         
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
@@ -218,17 +222,15 @@ public class UsuarioDAO {
     }
     
     public void inicializarAdministradorDefecto() {
-        String sqlCheck = "SELECT COUNT(*) FROM Usuarios";
+        // CORREGIDO: usuarios en minúscula
+        String sqlCheck = "SELECT COUNT(*) FROM usuarios";
         
         try (Connection conexion = factory.getConexion();
              PreparedStatement cmdCheck = conexion.prepareStatement(sqlCheck);
              ResultSet rs = cmdCheck.executeQuery()) {
             
-            // Si el conteo es 0, la tabla está completamente vacía (instalación limpia)
             if (rs.next() && rs.getInt(1) == 0) {
                 System.out.println("Base de datos sin usuarios. Instalando administrador principal...");
-                
-                // Generamos el primer usuario administrador
                 registrarUsuario("SairTech", "d3jam33ntrar", "Administrador");
             }
         } catch (SQLException e) {
