@@ -26,7 +26,7 @@ public class PanelInventario extends javax.swing.JPanel {
 
     private JTextField txtCodigo;
     private JTextField txtNombre;
-    private JTextField txtUbicacion; // <--- NUEVA CAJA DE TEXTO
+    private JTextField txtUbicacion; 
     private JComboBox<String> cmbCategoria;
     private JComboBox<modelo.Proveedor> cmbProveedor; 
     
@@ -44,6 +44,8 @@ public class PanelInventario extends javax.swing.JPanel {
     private JButton btnActualizar;
     private JButton btnLimpiar;
     private JButton btnImprimirEtiqueta;
+    private JButton btnEliminar; // <--- NUEVO
+    private JCheckBox chkVerEliminados; // <--- NUEVO
 
     private int idProductoSeleccionado = -1;
     private List<Integer> listaIdCategorias = new ArrayList<>();
@@ -87,7 +89,7 @@ public class PanelInventario extends javax.swing.JPanel {
 
         txtCodigo = crearTextField(); 
         txtNombre = crearTextField();
-        txtUbicacion = crearTextField(); // <--- INICIALIZAR
+        txtUbicacion = crearTextField(); 
         
         cmbCategoria = new JComboBox<>(); cmbCategoria.setPreferredSize(new Dimension(0, 35));
         cmbProveedor = new JComboBox<>(); cmbProveedor.setPreferredSize(new Dimension(0, 35));
@@ -106,7 +108,6 @@ public class PanelInventario extends javax.swing.JPanel {
         gbc.gridy++; panel.add(new JLabel("Código de Barras (Opcional):"), gbc); gbc.gridy++; panel.add(txtCodigo, gbc);
         gbc.gridy++; panel.add(new JLabel("Nombre del Producto/Repuesto: *"), gbc); gbc.gridy++; panel.add(txtNombre, gbc);
         
-        // --- SECCIÓN UBICACIÓN ---
         gbc.gridy++; panel.add(new JLabel("Ubicación Física (Ej: Vitrina 1):"), gbc); 
         gbc.gridy++; panel.add(txtUbicacion, gbc);
 
@@ -135,9 +136,14 @@ public class PanelInventario extends javax.swing.JPanel {
         btnActualizar = new JButton("Actualizar"); estilizarBoton(btnActualizar, new Color(52, 152, 219)); btnActualizar.setEnabled(false); btnActualizar.addActionListener(e -> actualizarProducto());
         btnLimpiar = new JButton("Limpiar"); estilizarBoton(btnLimpiar, new Color(149, 165, 166)); btnLimpiar.addActionListener(e -> limpiarFormulario());
         btnImprimirEtiqueta = new JButton("Imprimir Etiquetas"); estilizarBoton(btnImprimirEtiqueta, new Color(155, 89, 182)); btnImprimirEtiqueta.setEnabled(false); btnImprimirEtiqueta.addActionListener(e -> imprimirEtiquetas());
+        
+        // --- BOTÓN ELIMINAR ---
+        btnEliminar = new JButton("Eliminar"); estilizarBoton(btnEliminar, new Color(231, 76, 60)); 
+        btnEliminar.setEnabled(false); btnEliminar.addActionListener(e -> alternarEstadoProducto());
 
         gbc.gridy++; gbc.insets = new Insets(15, 0, 5, 0); panel.add(btnGuardar, gbc);
-        JPanel panelAcciones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0)); panelAcciones.setOpaque(false); panelAcciones.add(btnActualizar); panelAcciones.add(btnLimpiar);
+        JPanel panelAcciones = new JPanel(new java.awt.GridLayout(1, 3, 5, 0)); panelAcciones.setOpaque(false); 
+        panelAcciones.add(btnActualizar); panelAcciones.add(btnLimpiar); panelAcciones.add(btnEliminar);
         gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(panelAcciones, gbc);
         gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0); panel.add(btnImprimirEtiqueta, gbc);
         gbc.gridy++; gbc.weighty = 1.0; panel.add(Box.createVerticalGlue(), gbc);
@@ -152,7 +158,15 @@ public class PanelInventario extends javax.swing.JPanel {
         txtBuscar = new JTextField(); txtBuscar.setFont(new Font("Segoe UI", Font.PLAIN, 16)); txtBuscar.setPreferredSize(new Dimension(0, 40));
         txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() { public void keyReleased(java.awt.event.KeyEvent evt) { cargarTabla(txtBuscar.getText().trim()); } });
         
-        panelBuscador.add(lblBuscar, BorderLayout.WEST); panelBuscador.add(txtBuscar, BorderLayout.CENTER);
+        // --- CHECKBOX PAPELERA ---
+        chkVerEliminados = new JCheckBox("Ver Papelera");
+        chkVerEliminados.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        chkVerEliminados.setOpaque(false);
+        chkVerEliminados.addActionListener(e -> cargarTabla(txtBuscar.getText().trim()));
+        
+        panelBuscador.add(lblBuscar, BorderLayout.WEST); 
+        panelBuscador.add(txtBuscar, BorderLayout.CENTER);
+        panelBuscador.add(chkVerEliminados, BorderLayout.EAST);
 
         tablaProductos = new JTable(); tablaProductos.setRowHeight(30); tablaProductos.setFont(new Font("Segoe UI", Font.PLAIN, 14)); tablaProductos.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
         tablaProductos.addMouseListener(new java.awt.event.MouseAdapter() { public void mouseClicked(java.awt.event.MouseEvent evt) { seleccionarProducto(); } });
@@ -169,7 +183,7 @@ public class PanelInventario extends javax.swing.JPanel {
     }
 
     private void estilizarBoton(JButton btn, Color color) {
-        btn.setBackground(color); btn.setForeground(Color.WHITE); btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btn.setBackground(color); btn.setForeground(Color.WHITE); btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btn.setPreferredSize(new Dimension(0, 40)); btn.setFocusPainted(false); btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     }
 
@@ -185,8 +199,13 @@ public class PanelInventario extends javax.swing.JPanel {
     }
 
     private void cargarTabla(String filtro) {
-        List<Object[]> lista = new dao.ProductoDAO().buscarProductoCompleto(filtro);
-        // --- AHORA MOSTRAMOS LA UBICACIÓN EN LA TABLA ---
+        // --- MODIFICADO: Lee el checkbox ---
+        boolean verPapelera = chkVerEliminados.isSelected();
+        List<Object[]> lista = new dao.ProductoDAO().buscarProductoCompleto(filtro, verPapelera);
+        
+        btnEliminar.setText(verPapelera ? "Restaurar" : "Eliminar");
+        btnEliminar.setBackground(verPapelera ? new Color(46, 204, 113) : new Color(231, 76, 60));
+        
         DefaultTableModel modelo = new DefaultTableModel(new Object[]{"ID", "Código", "Nombre", "Categoría", "Ubicación", "P. Compra", "P. Venta", "Stock", "Mínimo", "ID_Prov", "AplicaTec", "P_Tecnico"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -197,7 +216,6 @@ public class PanelInventario extends javax.swing.JPanel {
         if (tablaProductos.getColumnCount() > 0) {
             tablaProductos.getColumnModel().getColumn(0).setPreferredWidth(30);
             tablaProductos.getColumnModel().getColumn(2).setPreferredWidth(200); 
-            // Ocultar las columnas internas (9, 10, 11)
             for (int i = 9; i <= 11; i++) {
                 tablaProductos.getColumnModel().getColumn(i).setMinWidth(0);
                 tablaProductos.getColumnModel().getColumn(i).setMaxWidth(0);
@@ -217,7 +235,6 @@ public class PanelInventario extends javax.swing.JPanel {
             txtNombre.setText(tablaProductos.getValueAt(fila, 2).toString());
             cmbCategoria.setSelectedItem(tablaProductos.getValueAt(fila, 3).toString());
             
-            // --- NUEVO ---
             Object ubic = tablaProductos.getValueAt(fila, 4);
             txtUbicacion.setText(ubic != null ? ubic.toString() : "");
             
@@ -227,13 +244,11 @@ public class PanelInventario extends javax.swing.JPanel {
             txtStockMinimo.setText(tablaProductos.getValueAt(fila, 8).toString());
 
             if (tablaProductos.getColumnCount() > 11) {
-                // Proveedor
                 Object objProv = tablaProductos.getValueAt(fila, 9);
                 int idProv = (objProv != null) ? Integer.parseInt(objProv.toString()) : 0;
                 for (int i = 0; i < cmbProveedor.getItemCount(); i++) {
                     if (cmbProveedor.getItemAt(i).getIdProveedor() == idProv) { cmbProveedor.setSelectedIndex(i); break; }
                 }
-                // Checkbox y Precio Técnico
                 boolean aplicaTecnico = (boolean) tablaProductos.getValueAt(fila, 10);
                 chkAplicaTecnico.setSelected(aplicaTecnico);
                 txtPrecioTecnico.setEnabled(aplicaTecnico);
@@ -241,6 +256,7 @@ public class PanelInventario extends javax.swing.JPanel {
             }
 
             btnGuardar.setEnabled(false); btnActualizar.setEnabled(true); btnImprimirEtiqueta.setEnabled(true);
+            btnEliminar.setEnabled(true);
         }
     }
 
@@ -273,6 +289,28 @@ public class PanelInventario extends javax.swing.JPanel {
         } else {
             JOptionPane.showMessageDialog(this, "Error al actualizar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    // --- LÓGICA DE OCULTAR / RESTAURAR ---
+    private void alternarEstadoProducto() {
+        if (idProductoSeleccionado == -1) return;
+        boolean esPapelera = chkVerEliminados.isSelected();
+        dao.ProductoDAO daoProd = new dao.ProductoDAO();
+        
+        if (esPapelera) {
+            if (daoProd.restaurar(idProductoSeleccionado)) {
+                JOptionPane.showMessageDialog(this, "Producto restaurado con éxito.");
+            }
+        } else {
+            int resp = JOptionPane.showConfirmDialog(this, "¿Está seguro de ocultar este producto?\nNo se mostrará en el Punto de Venta.", "Confirmar", JOptionPane.YES_NO_OPTION);
+            if (resp == JOptionPane.YES_OPTION) {
+                if (daoProd.eliminar(idProductoSeleccionado)) {
+                    JOptionPane.showMessageDialog(this, "Producto enviado a la papelera.");
+                }
+            }
+        }
+        limpiarFormulario();
+        cargarTabla(txtBuscar.getText().trim());
     }
 
     private boolean validarFormulario() {
@@ -312,8 +350,6 @@ public class PanelInventario extends javax.swing.JPanel {
             pTecnico = Double.parseDouble(txtPrecioTecnico.getText().trim());
         }
         p.setPrecioTecnico(pTecnico);
-        
-        // --- GUARDAMOS LA UBICACIÓN ---
         p.setUbicacion(txtUbicacion.getText().trim());
         
         return p;
@@ -330,7 +366,8 @@ public class PanelInventario extends javax.swing.JPanel {
         txtPrecioTecnico.setText("0.00");
         txtPrecioTecnico.setEnabled(false);
         
-        btnGuardar.setEnabled(true); btnActualizar.setEnabled(false); btnImprimirEtiqueta.setEnabled(false);
+        btnGuardar.setEnabled(true); btnActualizar.setEnabled(false); 
+        btnImprimirEtiqueta.setEnabled(false); btnEliminar.setEnabled(false);
         tablaProductos.clearSelection();
     }
 

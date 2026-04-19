@@ -8,6 +8,21 @@
             <file>file:/C:/SairTech_System/src/gui/PanelProveedores.java</file>
             <file>file:/C:/SairTech_System/src/gui/PanelPuntoVenta.java</file>
             <file>file:/C:/SairTech_System/src/gui/PanelLogin.java</file>
+            <file>file:/C:/SairTech_System/src/utilidades/GeneradorPDF.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelListadoOrdenes.java</file>
+            <file>file:/C:/SairTech_System/src/dao/ClienteDAO.java</file>
+            <file>file:/C:/SairTech_System/src/dao/VentaDAO.java</file>
+            <file>file:/C:/SairTech_System/src/dao/OrdenReparacionDAO.java</file>
+            <file>file:/C:/SairTech_System/src/modelo/Marca.java</file>
+            <file>file:/C:/SairTech_System/src/modelo/OrdenReparacion.java</file>
+            <file>file:/C:/SairTech_System/src/dao/KnijicoDAO.java</file>
+            <file>file:/C:/SairTech_System/src/dao/UsuarioDAO.java</file>
+            <file>file:/C:/SairTech_System/src/dao/ProductoDAO.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelInventario.java</file>
+            <file>file:/C:/SairTech_System/src/gui/VentanaPrincipal.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelIngresoEquipos.java</file>
+            <file>file:/C:/SairTech_System/src/gui/PanelClientes.java</file>
+            <file>file:/C:/SairTech_System/src/utilidades/ImpresoraDirecta.java</file>
         </group>
     </open-files>
 </project-private>

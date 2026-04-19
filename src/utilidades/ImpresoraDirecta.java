@@ -97,19 +97,17 @@ public class ImpresoraDirecta implements Printable {
     }
 
     // =========================================================
-    // 1. GENERADOR DE STICKER DEL TÉCNICO (REEMPLAZA AL PDF)
+    // 1. GENERADOR DE STICKER DEL TÉCNICO (OPTIMIZADO)
     // =========================================================
     public boolean imprimirTicketTecnicoDirecto(String idOrden, String cliente, String equipo, String problema, boolean esCelular, String tecnico, String clave) {
         PrinterJob pj = PrinterJob.getPrinterJob();
-        if (!pj.printDialog()) return false; // AQUÍ TE DEJA ELEGIR LA IMPRESORA
+        if (!pj.printDialog()) return false;
 
         PageFormat pf = pj.defaultPage();
         Paper paper = new Paper();
-        double width = 160; // Ancho para sticker de 58mm aprox
-        
-        // --- CORRECCIÓN: AUMENTAMOS EL ALTO DEL PAPEL ---
-        // Antes era 160, lo subimos a 190 para que el código de barras y las notas quepan perfectos sin cortarse
-        double height = esCelular ? 190 : 140; 
+        double width = 160; 
+        // Redujimos el alto para ahorrar papel
+        double height = esCelular ? 170 : 120; 
         
         paper.setSize(width, height);
         paper.setImageableArea(2, 2, width - 4, height - 4);
@@ -124,46 +122,45 @@ public class ImpresoraDirecta implements Printable {
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
                 g2d.setColor(Color.BLACK);
 
-                int y = 15;
+                int y = 12; // Empezamos más arriba
                 g2d.setFont(new Font("SansSerif", Font.BOLD, 10));
                 g2d.drawString("ORDEN: " + idOrden, 5, y); 
                 
                 g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
-                g2d.drawString("CLI: " + (cliente.length() > 15 ? cliente.substring(0, 15) : cliente), 80, y); y += 15;
+                g2d.drawString("CLI: " + (cliente.length() > 15 ? cliente.substring(0, 15) : cliente), 75, y); y += 12;
                 
-                g2d.drawString("EQ: " + equipo, 5, y); y += 15;
-                g2d.drawString("TEC: " + tecnico, 5, y); y += 15;
+                g2d.drawString("EQ: " + equipo, 5, y); y += 12;
+                g2d.drawString("TEC: " + tecnico, 5, y); y += 12;
                 
                 g2d.setFont(new Font("SansSerif", Font.BOLD, 9));
-                g2d.drawString("SEGURIDAD:", 5, y); y += 12;
+                g2d.drawString("SEGURIDAD:", 5, y); y += 10;
                 g2d.setFont(new Font("SansSerif", Font.PLAIN, 9));
                 
                 if (clave.toLowerCase().contains("patr") || clave.equalsIgnoreCase("p")) {
-                    g2d.drawString("O    O    O", 20, y); y += 12;
-                    g2d.drawString("O    O    O", 20, y); y += 12;
-                    g2d.drawString("O    O    O", 20, y); y += 15;
+                    g2d.drawString("O   O   O", 20, y); y += 10;
+                    g2d.drawString("O   O   O", 20, y); y += 10;
+                    g2d.drawString("O   O   O", 20, y); y += 12;
                 } else {
-                    g2d.drawString(clave, 20, y); y += 15;
+                    g2d.drawString(clave, 20, y); y += 12;
                 }
                 
-                // Cortar texto de falla si es absurdamente largo para que no estropee el diseño
-                String problemaCorto = problema.length() > 30 ? problema.substring(0, 30) + "..." : problema;
+                String problemaCorto = problema.length() > 35 ? problema.substring(0, 35) + "..." : problema;
                 g2d.drawString("F: " + problemaCorto, 5, y); y += 15;
 
                 if (esCelular) {
                     try {
                         Barcode128 barcode = new Barcode128();
                         barcode.setCode(idOrden);
-                        barcode.setBarHeight(25f); 
+                        barcode.setBarHeight(20f); // Código de barras un poco más bajo 
                         java.awt.Image img = barcode.createAwtImage(Color.BLACK, Color.WHITE);
-                        g2d.drawImage(img, 15, y, 120, 25, null); // IMPRIME CÓDIGO DE BARRAS
-                        y += 35;
+                        g2d.drawImage(img, 15, y, 120, 20, null); 
+                        y += 28;
                     } catch (Exception e) {}
                     g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
                     g2d.drawString("NOTAS:___________________", 5, y);
                 } else {
                     g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
-                    g2d.drawString("TRABAJO/REPUESTOS:", 5, y); y += 15;
+                    g2d.drawString("TRABAJO/REPUESTOS:", 5, y); y += 12;
                     g2d.drawString("________________________", 5, y);
                 }
 
@@ -175,7 +172,7 @@ public class ImpresoraDirecta implements Printable {
     }
     
     // =========================================================
-    // 2. GENERADOR DE RECIBOS TÉRMICOS DE VENTA (AHORA DETECTA ÓRDENES)
+    // 2. GENERADOR DE RECIBOS TÉRMICOS DE VENTA (OPTIMIZADO)
     // =========================================================
     public boolean imprimirReciboVenta(int idVenta) {
         String fechaVenta = ""; String cajero = ""; double total = 0.0; String metodoPago = "";
@@ -194,7 +191,7 @@ public class ImpresoraDirecta implements Printable {
                         total = rs.getDouble("total");
                         metodoPago = rs.getString("metodo_pago");
                         cajero = rs.getString("usuario");
-                        idOrdenVinculada = rs.getInt("id_orden"); // DETECTAMOS SI ES REPARACIÓN
+                        idOrdenVinculada = rs.getInt("id_orden"); 
                     }
                 }
             }
@@ -208,7 +205,6 @@ public class ImpresoraDirecta implements Printable {
             }
         } catch (Exception e) { return false; }
 
-        // --- BUSCAR DATOS DE LA REPARACIÓN SI EXISTE ---
         String repEquipo = ""; String repFalla = ""; String repTrabajo = ""; String repCliente = "";
         if (idOrdenVinculada > 0) {
             String sqlRep = "SELECT e.modelo, o.falla_reportada, o.trabajo_realizado, CONCAT(c.nombre, ' ', c.apellido) as cliente FROM ordenes_reparacion o JOIN equipos_registrados e ON o.id_equipo = e.id_equipo JOIN clientes c ON e.id_cliente = c.id_cliente WHERE o.id_orden = ?";
@@ -231,8 +227,8 @@ public class ImpresoraDirecta implements Printable {
         Paper paper = new Paper();
 
         double width = 200; 
-        // Si es reparación, el ticket debe ser mucho más largo para que quepa toda la información
-        double height = idOrdenVinculada > 0 ? 550 + (detalles.size() * 25) : 340 + (detalles.size() * 25); 
+        // --- REDUCCIÓN DRÁSTICA DEL LARGO DEL PAPEL ---
+        double height = idOrdenVinculada > 0 ? 380 + (detalles.size() * 12) : 230 + (detalles.size() * 12); 
 
         paper.setSize(width, height);
         paper.setImageableArea(0, 0, width, height);
@@ -250,80 +246,77 @@ public class ImpresoraDirecta implements Printable {
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
                 g2d.setColor(Color.BLACK);
 
-                int y = 15; 
-                g2d.setFont(new Font("SansSerif", Font.BOLD, 14));
-                centrarTexto(g2d, "SAIRTECH", width, y); y += 15;
+                int y = 12; 
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 12)); // Encabezado un poco más pequeño
+                centrarTexto(g2d, "SAIRTECH", width, y); y += 12;
                 
-                g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
-                centrarTexto(g2d, "Reparación y Venta de Accesorios", width, y); y += 12;
-                centrarTexto(g2d, "Santa Bárbara, Honduras", width, y); y += 20;
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
+                centrarTexto(g2d, "Reparación y Venta de Accesorios", width, y); y += 9;
+                centrarTexto(g2d, "Santa Bárbara, Honduras", width, y); y += 15;
 
-                g2d.setFont(new Font("SansSerif", Font.BOLD, 10));
-                // CAMBIAR TÍTULO SI ES REPARACIÓN
-                centrarTexto(g2d, fIdOrden > 0 ? "COMPROBANTE DE ENTREGA" : "NOTA DE VENTA / RECIBO", width, y); y += 15;
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 9));
+                centrarTexto(g2d, fIdOrden > 0 ? "COMPROBANTE DE ENTREGA" : "NOTA DE VENTA / RECIBO", width, y); y += 12;
                 
-                g2d.setFont(new Font("Monospaced", Font.PLAIN, 8));
-                g2d.drawString("Ticket No: " + idVenta, 10, y); y += 12;
-                g2d.drawString("Fecha: " + fFecha, 10, y); y += 12;
+                g2d.setFont(new Font("Monospaced", Font.PLAIN, 7));
+                g2d.drawString("Ticket No: " + idVenta + "  |  Fecha: " + fFecha, 5, y); y += 10;
                 
                 // --- SECCIÓN EXCLUSIVA PARA REPARACIONES ---
                 if (fIdOrden > 0) {
-                    g2d.drawString("------------------------------------------", 10, y); y += 12;
-                    g2d.setFont(new Font("SansSerif", Font.BOLD, 9));
-                    g2d.drawString("ORDEN DE SERVICIO #" + fIdOrden, 10, y); y += 15;
-                    g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
-                    g2d.drawString("CLIENTE: " + fRepCli, 10, y); y += 12;
-                    g2d.drawString("EQUIPO: " + fRepEq, 10, y); y += 15;
-                    
+                    g2d.drawString("-----------------------------------------", 5, y); y += 10;
                     g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
-                    g2d.drawString("SÍNTOMAS / FALLA:", 10, y); y += 12;
-                    g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
-                    y = dibujarTextoMultilinea(g2d, fRepFalla, 10, y, (int)width - 20); y += 5;
+                    g2d.drawString("ORDEN DE SERVICIO #" + fIdOrden, 5, y); y += 10;
+                    g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
+                    g2d.drawString("CLIENTE: " + fRepCli, 5, y); y += 9;
+                    g2d.drawString("EQUIPO: " + fRepEq, 5, y); y += 12;
+                    
+                    g2d.setFont(new Font("SansSerif", Font.BOLD, 7));
+                    g2d.drawString("SÍNTOMAS / FALLA:", 5, y); y += 9;
+                    g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
+                    y = dibujarTextoMultilinea(g2d, fRepFalla, 5, y, (int)width - 10); y += 3;
 
-                    g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
-                    g2d.drawString("TRABAJO REALIZADO:", 10, y); y += 12;
-                    g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
-                    y = dibujarTextoMultilinea(g2d, fRepTrab, 10, y, (int)width - 20); y += 5;
+                    g2d.setFont(new Font("SansSerif", Font.BOLD, 7));
+                    g2d.drawString("TRABAJO REALIZADO:", 5, y); y += 9;
+                    g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
+                    y = dibujarTextoMultilinea(g2d, fRepTrab, 5, y, (int)width - 10); y += 3;
                     
-                    g2d.drawString("ENTREGADO POR: " + fCajero, 10, y); y += 12;
+                    g2d.drawString("ENTREGADO POR: " + fCajero, 5, y); y += 10;
                 } else {
-                    g2d.drawString("Cajero: " + fCajero, 10, y); y += 12;
+                    g2d.drawString("Cajero: " + fCajero, 5, y); y += 10;
                 }
 
-                g2d.setFont(new Font("Monospaced", Font.PLAIN, 8));
-                g2d.drawString("------------------------------------------", 10, y); y += 12;
-                g2d.drawString("CANT DESCRIPCION           SUBTOTAL", 10, y); y += 12;
-                g2d.drawString("------------------------------------------", 10, y); y += 15;
+                g2d.setFont(new Font("Monospaced", Font.PLAIN, 7));
+                g2d.drawString("-----------------------------------------", 5, y); y += 9;
+                g2d.drawString("CANT DESCRIPCION             SUBTOTAL", 5, y); y += 9;
+                g2d.drawString("-----------------------------------------", 5, y); y += 12;
 
                 for (String[] det : detalles) {
                     String cant = det[0]; String desc = det[1]; String sub = det[3];
-                    if (desc.length() > 20) desc = desc.substring(0, 20) + "..";
-                    g2d.drawString(cant + "x", 10, y); g2d.drawString(desc, 35, y); 
+                    if (desc.length() > 22) desc = desc.substring(0, 22) + "..";
+                    g2d.drawString(cant + "x", 5, y); g2d.drawString(desc, 25, y); 
                     int subWidth = g2d.getFontMetrics().stringWidth(sub);
-                    g2d.drawString(sub, (int)width - subWidth - 10, y); y += 12;
+                    g2d.drawString(sub, (int)width - subWidth - 5, y); y += 9; // Interlineado de productos más corto
                 }
 
-                y += 5; g2d.drawString("------------------------------------------", 10, y); y += 20;
-                g2d.setFont(new Font("SansSerif", Font.BOLD, 12));
-                g2d.drawString("TOTAL A PAGAR:", 10, y);
+                y += 3; g2d.drawString("-----------------------------------------", 5, y); y += 12;
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 10)); // Total destacado pero no gigante
+                g2d.drawString("TOTAL A PAGAR:", 5, y);
                 String totalStr = String.format("L. %.2f", fTotal);
                 int totWidth = g2d.getFontMetrics().stringWidth(totalStr);
-                g2d.drawString(totalStr, (int)width - totWidth - 10, y); y += 20;
+                g2d.drawString(totalStr, (int)width - totWidth - 5, y); y += 15;
 
-                g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
-                g2d.drawString("Método de Pago: " + fMetodo, 10, y); y += 20;
-                g2d.drawString("------------------------------------------", 10, y); y += 15;
-
-                g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
-                centrarTexto(g2d, "PÓLIZA DE GARANTÍA", width, y); y += 15;
                 g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
-                g2d.drawString("1. Válida solo por defectos de fábrica.", 10, y); y += 10;
-                g2d.drawString("2. Se anula por humedad, golpes o", 10, y); y += 10;
-                g2d.drawString("   uso de cargadores genéricos.", 10, y); y += 10;
-                g2d.drawString("3. Sellos intactos obligatorios.", 10, y); y += 10;
-                g2d.drawString("4. Indispensable presentar este ticket.", 10, y); y += 20;
+                g2d.drawString("Método de Pago: " + fMetodo, 5, y); y += 12;
+                g2d.drawString("-----------------------------------------", 5, y); y += 12;
 
-                centrarTexto(g2d, "¡Gracias por su preferencia!", width, y); y += 12;
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 7));
+                centrarTexto(g2d, "PÓLIZA DE GARANTÍA", width, y); y += 10;
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 6)); // Letra chica para términos legales
+                g2d.drawString("1. Válida solo por defectos de fábrica.", 5, y); y += 8;
+                g2d.drawString("2. Se anula por humedad, golpes o", 5, y); y += 8;
+                g2d.drawString("   uso de cargadores genéricos.", 5, y); y += 8;
+                g2d.drawString("3. Indispensable presentar este ticket.", 5, y); y += 15;
+
+                centrarTexto(g2d, "¡Gracias por su preferencia!", width, y); y += 9;
                 centrarTexto(g2d, "Revise sus productos. No hay cambios.", width, y);
 
                 return PAGE_EXISTS;
@@ -341,7 +334,7 @@ public class ImpresoraDirecta implements Printable {
         g2d.drawString(texto, (int) ((width - stringWidth) / 2), y);
     }
     
-    // Función auxiliar para que los textos largos en el ticket térmico no se salgan del papel
+    // Función auxiliar para texto multilínea
     private int dibujarTextoMultilinea(Graphics2D g2d, String texto, int x, int y, int maxW) {
         if (texto == null) return y;
         String[] words = texto.split(" ");
@@ -351,16 +344,15 @@ public class ImpresoraDirecta implements Printable {
                 line += word + " ";
             } else {
                 g2d.drawString(line, x, y);
-                y += 10;
+                y += 8; // Salto de renglón más corto
                 line = word + " ";
             }
         }
         g2d.drawString(line, x, y);
-        return y + 10;
+        return y + 8;
     }
 
     public boolean imprimirEtiquetaKnijicoDirecta(String modelo, String codigo, String lote, String caja) {
-        // ... (Tu código intacto de Knijico)
         PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
         if (printServices.length == 0) return false;
         String[] nombresImpresoras = new String[printServices.length];

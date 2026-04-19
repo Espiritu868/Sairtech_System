@@ -39,37 +39,46 @@ public class PanelClientes extends javax.swing.JPanel {
         
         for (modelo.Cliente c : lista) {
             Object[] fila = new Object[6];
+            String iden = c.getNumeroIdentidad();
+            String tel = c.getTelefono();
+            String cor = c.getCorreo();
+
             fila[0] = c.getIdCliente();
-            fila[1] = c.getNumeroIdentidad();
+            fila[1] = iden;
             fila[2] = c.getNombre();
             fila[3] = c.getApellido();
-            fila[4] = c.getTelefono();
-            fila[5] = c.getCorreo();
+            
+            // --- LÓGICA DE LIMPIEZA VISUAL (N/A) ---
+            // Si el teléfono es nulo, está vacío o contiene la identidad (nuestro relleno SN-)
+            if (tel == null || tel.trim().isEmpty() || tel.contains(iden) || tel.equals("N/A")) {
+                fila[4] = "N/A";
+            } else {
+                fila[4] = tel;
+            }
+
+            // Si el correo es nulo, vacío o contiene la identidad
+            if (cor == null || cor.trim().isEmpty() || cor.contains(iden) || cor.equals("N/A")) {
+                fila[5] = "N/A";
+            } else {
+                fila[5] = cor;
+            }
+            // ---------------------------------------
+
             modeloTabla.addRow(fila);
         }
         
         tablaClientes.setModel(modeloTabla);
 
+        // (Mantén tus configuraciones de ancho de columna iguales aquí abajo...)
         if (tablaClientes.getColumnModel().getColumnCount() > 0) {
-            tablaClientes.getColumnModel().getColumn(0).setPreferredWidth(40);  
-            tablaClientes.getColumnModel().getColumn(1).setPreferredWidth(130); 
-            tablaClientes.getColumnModel().getColumn(2).setPreferredWidth(140); 
-            tablaClientes.getColumnModel().getColumn(3).setPreferredWidth(140); 
-            tablaClientes.getColumnModel().getColumn(4).setPreferredWidth(100); 
-            tablaClientes.getColumnModel().getColumn(5).setPreferredWidth(200); 
-        }
-        
-        if (tablaClientes.getColumnModel().getColumnCount() > 0) {
-            tablaClientes.getColumnModel().getColumn(0).setPreferredWidth(50);  
+            tablaClientes.getColumnModel().getColumn(0).setPreferredWidth(50);   
             tablaClientes.getColumnModel().getColumn(1).setPreferredWidth(150); 
             tablaClientes.getColumnModel().getColumn(2).setPreferredWidth(160); 
             tablaClientes.getColumnModel().getColumn(3).setPreferredWidth(160); 
             tablaClientes.getColumnModel().getColumn(4).setPreferredWidth(120); 
             tablaClientes.getColumnModel().getColumn(5).setPreferredWidth(250); 
-            
             tablaClientes.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF); 
         }
-       
     }
 
     /**
@@ -223,13 +232,7 @@ public class PanelClientes extends javax.swing.JPanel {
         String telefono = txtTelefono.getText().trim();
         String correo = txtCorreo.getText().trim();
 
-        if (telefono.isEmpty()) {
-            String relleno = "SN-" + identidad;
-            if (relleno.length() > 20) {
-                relleno = relleno.substring(0, 20); 
-            }
-            telefono = relleno;
-        }
+        // (ELIMINAMOS EL RELLENO AUTOMÁTICO DE "SN-", AHORA ES OPCIONAL REAL)
 
         if (identidad.isEmpty() || nombre.isEmpty() || apellido.isEmpty()) {
             javax.swing.JOptionPane.showMessageDialog(this, "La Identidad, Nombre y Apellido son obligatorios.", "Advertencia", javax.swing.JOptionPane.WARNING_MESSAGE);
@@ -248,14 +251,16 @@ public class PanelClientes extends javax.swing.JPanel {
             return;
         }
 
-        if (!telefono.startsWith("SN-") && dao.existeTelefono(telefono, -1)) {
+        // VALIDAMOS EL TELÉFONO SOLO SI EL USUARIO ESCRIBIÓ UNO
+        if (!telefono.isEmpty() && dao.existeTelefono(telefono, -1)) {
             javax.swing.JOptionPane.showMessageDialog(this, "Este teléfono ya está registrado a otro cliente.", "Error de Duplicado", javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         modelo.Cliente nuevoCliente = new modelo.Cliente(identidad, nombre, apellido, telefono, correo);
 
-        if (dao.insertar(nuevoCliente)) {
+        // CORRECCIÓN: dao.insertar ahora devuelve el ID generado (!= -1 significa éxito)
+        if (dao.insertar(nuevoCliente) != -1) {
             javax.swing.JOptionPane.showMessageDialog(this, "¡Cliente guardado exitosamente!", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
             btnLimpiarActionPerformed(evt); 
         } else {
@@ -319,13 +324,7 @@ public class PanelClientes extends javax.swing.JPanel {
         String telefonoActual = txtTelefono.getText().trim();
         String correoActual = txtCorreo.getText().trim();
 
-        if (telefonoActual.isEmpty()) {
-            String relleno = "SN-" + identidadActual;
-            if (relleno.length() > 20) {
-                relleno = relleno.substring(0, 20);
-            }
-            telefonoActual = relleno;
-        }
+        // (ELIMINAMOS EL RELLENO AUTOMÁTICO DE "SN-")
 
         int fila = tablaClientes.getSelectedRow();
         String identidadTabla = tablaClientes.getValueAt(fila, 1).toString();
@@ -349,7 +348,6 @@ public class PanelClientes extends javax.swing.JPanel {
             return;
         }
 
-        // Validar tamaño de identidad
         if (identidadActual.length() < 13) {
             javax.swing.JOptionPane.showMessageDialog(this, "La identidad debe tener al menos 13 dígitos.", "Identidad Inválida", javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
@@ -357,14 +355,13 @@ public class PanelClientes extends javax.swing.JPanel {
 
         dao.ClienteDAO dao = new dao.ClienteDAO();
 
-        // Validar duplicados (Le mandamos el ID para que se ignore a sí mismo)
         if (dao.existeIdentidad(identidadActual, idClienteSeleccionado)) {
             javax.swing.JOptionPane.showMessageDialog(this, "La nueva identidad ya pertenece a otro cliente.", "Error de Duplicado", javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Solo validamos duplicados si NO es nuestro número de relleno automático
-        if (!telefonoActual.startsWith("SN-") && dao.existeTelefono(telefonoActual, idClienteSeleccionado)) {
+        // VALIDAMOS EL TELÉFONO SOLO SI EL USUARIO ESCRIBIÓ UNO
+        if (!telefonoActual.isEmpty() && dao.existeTelefono(telefonoActual, idClienteSeleccionado)) {
             javax.swing.JOptionPane.showMessageDialog(this, "El nuevo teléfono ya pertenece a otro cliente.", "Error de Duplicado", javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }

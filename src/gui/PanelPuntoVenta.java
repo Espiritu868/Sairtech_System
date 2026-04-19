@@ -58,6 +58,7 @@ public class PanelPuntoVenta extends JPanel {
     private JButton btnCobrar;
     private JButton btnQuitarItem;
     private JButton btnModificarCant; 
+    private JButton btnEditarItem; // Antes se llamaba btnEditarOrden
 
     private double totalVenta = 0.0;
     private int idOrdenVinculada = -1; 
@@ -231,9 +232,22 @@ public class PanelPuntoVenta extends JPanel {
         btnQuitarItem.setPreferredSize(new Dimension(160, 35)); btnQuitarItem.setFocusPainted(false);
         btnQuitarItem.addActionListener(e -> quitarItemCarrito());
 
+        // --- NUEVO BOTÓN PARA EDITAR ORDEN ---
+        btnEditarItem = new JButton("Modificar Precio / Detalles"); 
+        btnEditarItem.setBackground(new Color(243, 156, 18)); 
+        btnEditarItem.setForeground(Color.WHITE); 
+        btnEditarItem.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnEditarItem.setPreferredSize(new Dimension(210, 35)); 
+        btnEditarItem.setFocusPainted(false);
+        btnEditarItem.addActionListener(e -> editarItemSeleccionado());
+
+        // Agregamos el botón nuevo al panel
         JPanel panelBotonesTabla = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 10, 0));
-        panelBotonesTabla.setOpaque(false); panelBotonesTabla.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); 
-        panelBotonesTabla.add(btnModificarCant); panelBotonesTabla.add(btnQuitarItem);
+        panelBotonesTabla.setOpaque(false); panelBotonesTabla.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        
+        panelBotonesTabla.add(btnEditarItem); 
+        panelBotonesTabla.add(btnModificarCant); 
+        panelBotonesTabla.add(btnQuitarItem);
 
         JPanel panelTablaSup = new JPanel(new BorderLayout()); panelTablaSup.setOpaque(false);
         panelTablaSup.add(scroll, BorderLayout.CENTER); panelTablaSup.add(panelBotonesTabla, BorderLayout.SOUTH);
@@ -324,7 +338,7 @@ public class PanelPuntoVenta extends JPanel {
 
     private void seleccionarProductoManual() {
         dao.ProductoDAO daoP = new dao.ProductoDAO();
-        List<Object[]> resultados = daoP.buscarProductoCompleto(""); 
+        List<Object[]> resultados = daoP.buscarProductoParaVenta("");                                                                                                                                                                                                                           
         
         javax.swing.JDialog dialog = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Inventario General", true);
         dialog.setSize(800, 450); dialog.setLocationRelativeTo(this); dialog.setLayout(new BorderLayout(10, 10)); dialog.getContentPane().setBackground(Color.WHITE);
@@ -770,6 +784,105 @@ public class PanelPuntoVenta extends JPanel {
             }
         }
         return null;
+    }
+    
+    // 1. EL CEREBRO: Decide qué tipo de edición abrir dependiendo de lo que selecciones
+    private void editarItemSeleccionado() {
+        int fila = tablaCarrito.getSelectedRow();
+        if (fila < 0) {
+            JOptionPane.showMessageDialog(this, "Seleccione un ítem del carrito para editar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String descripcion = modeloCarrito.getValueAt(fila, 1).toString();
+
+        if (descripcion.startsWith("Orden #")) {
+            // Es una reparación de taller: Pide clave y abre el editor completo
+            editarDetallesOrden(fila);
+        } else {
+            // Es un producto normal del mostrador: Solo cambia el precio sin pedir clave
+            modificarPrecioProductoLibre(fila, descripcion);
+        }
+    }
+
+    // 2. EDICIÓN LIBRE PARA MOSTRADOR (Cables, cargadores, etc.)
+    private void modificarPrecioProductoLibre(int filaCarrito, String descripcion) {
+        String precioActual = modeloCarrito.getValueAt(filaCarrito, 3).toString();
+        String nuevoPrecioStr = JOptionPane.showInputDialog(this, "Nuevo precio a cobrar para:\n" + descripcion, precioActual);
+        
+        if (nuevoPrecioStr != null && !nuevoPrecioStr.trim().isEmpty()) {
+            try {
+                double nuevoPrecio = Double.parseDouble(nuevoPrecioStr.trim());
+                if(nuevoPrecio < 0) throw new NumberFormatException();
+                
+                int cantidad = Integer.parseInt(modeloCarrito.getValueAt(filaCarrito, 2).toString());
+                
+                modeloCarrito.setValueAt(nuevoPrecio, filaCarrito, 3); // Precio Unitario
+                modeloCarrito.setValueAt(nuevoPrecio * cantidad, filaCarrito, 4); // Subtotal
+                recalcularTotal();
+                
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Precio inválido.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    // 3. EDICIÓN SEGURA PARA TALLER (Pide PIN y deja el Sello de Auditoría)
+    private void editarDetallesOrden(int filaCarrito) {
+        if (idOrdenVinculada == -1) return;
+
+        // --- CAPA DE SEGURIDAD PARA TALLER ---
+        String[] datosFirma = solicitarFirmaUsuario();
+        if (datosFirma == null) return; 
+
+        dao.OrdenReparacionDAO daoOrden = new dao.OrdenReparacionDAO();
+        String[] textosActuales = daoOrden.obtenerTextosOrden(idOrdenVinculada);
+        double precioActual = Double.parseDouble(modeloCarrito.getValueAt(filaCarrito, 3).toString());
+
+        JTextField txtNuevoPrecio = new JTextField(String.valueOf(precioActual));
+        javax.swing.JTextArea txtProblema = new javax.swing.JTextArea(textosActuales[0] != null ? textosActuales[0] : "", 3, 20);
+        javax.swing.JTextArea txtTrabajo = new javax.swing.JTextArea(textosActuales[1] != null ? textosActuales[1] : "", 3, 20);
+        JTextField txtClave = new JTextField(textosActuales[2] != null ? textosActuales[2] : "");
+
+        txtProblema.setLineWrap(true); txtProblema.setWrapStyleWord(true);
+        txtTrabajo.setLineWrap(true); txtTrabajo.setWrapStyleWord(true);
+
+        Object[] mensaje = {
+            "Técnico Autorizando: " + datosFirma[1].toUpperCase(), 
+            " ",
+            "Precio Final a Cobrar (L.):", txtNuevoPrecio,
+            "Problema Reportado:", new JScrollPane(txtProblema),
+            "Trabajo Realizado (Saldrá en el PDF):", new JScrollPane(txtTrabajo),
+            "Clave / Seguridad:", txtClave
+        };
+
+        int opcion = JOptionPane.showConfirmDialog(this, mensaje, "Modificar Orden #" + idOrdenVinculada, 
+                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (opcion == JOptionPane.OK_OPTION) {
+            try {
+                double nuevoPrecio = Double.parseDouble(txtNuevoPrecio.getText().trim());
+                String nuevoProblema = txtProblema.getText().trim();
+                String nuevoTrabajo = txtTrabajo.getText().trim();
+                String nuevaClave = txtClave.getText().trim();
+
+                // SELLO DE AUDITORÍA
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
+                String firmaAuditoria = "\n[Editado en caja por: " + datosFirma[1].toUpperCase() + " el " + sdf.format(new java.util.Date()) + "]";
+                nuevoTrabajo = nuevoTrabajo + firmaAuditoria;
+
+                daoOrden.actualizarTextosOrden(idOrdenVinculada, nuevoProblema, nuevoTrabajo, nuevaClave);
+                daoOrden.actualizarEstadoYCosto(idOrdenVinculada, "Reparado", nuevoPrecio);
+
+                modeloCarrito.setValueAt(nuevoPrecio, filaCarrito, 3);
+                modeloCarrito.setValueAt(nuevoPrecio, filaCarrito, 4);
+                recalcularTotal();
+                
+                JOptionPane.showMessageDialog(this, "Orden actualizada por " + datosFirma[1] + ".");
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "El precio ingresado no es válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")

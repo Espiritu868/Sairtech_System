@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import modelo.Cliente;
@@ -16,34 +17,42 @@ public class ClienteDAO {
         this.factory = new ConexionFactory();
     }
 
-    public boolean insertar(Cliente cliente) {
+    public int insertar(Cliente cliente) {
         String sql = "INSERT INTO Clientes (numero_identidad, nombre, apellido, telefono, correo) VALUES (?, ?, ?, ?, ?)";
         try (Connection conexion = factory.getConexion();
-             PreparedStatement comando = conexion.prepareStatement(sql)) {
+             PreparedStatement comando = conexion.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) { 
             
             comando.setString(1, cliente.getNumeroIdentidad());
             comando.setString(2, cliente.getNombre());
             comando.setString(3, cliente.getApellido());
             
-            // Envío seguro de nulos para campos opcionales
+            // --- MAGIA ANTI-NULL: Usamos el truco del SN-Identidad para evitar duplicados ---
             if (cliente.getTelefono() == null || cliente.getTelefono().trim().isEmpty()) {
-                comando.setNull(4, java.sql.Types.VARCHAR);
+                String rellenoTel = "SN-" + cliente.getNumeroIdentidad();
+                if (rellenoTel.length() > 20) rellenoTel = rellenoTel.substring(0, 20);
+                comando.setString(4, rellenoTel);
             } else {
                 comando.setString(4, cliente.getTelefono().trim());
             }
             
             if (cliente.getCorreo() == null || cliente.getCorreo().trim().isEmpty()) {
-                comando.setNull(5, java.sql.Types.VARCHAR);
+                String rellenoCor = "SN-" + cliente.getNumeroIdentidad() + "@sairtech.com";
+                if (rellenoCor.length() > 50) rellenoCor = rellenoCor.substring(0, 50);
+                comando.setString(5, rellenoCor);
             } else {
                 comando.setString(5, cliente.getCorreo().trim());
             }
+            // --------------------------------------------------------------------------------
             
-            return comando.executeUpdate() > 0;
-            
+            if (comando.executeUpdate() > 0) {
+                try (ResultSet rs = comando.getGeneratedKeys()) {
+                    if (rs.next()) return rs.getInt(1); 
+                }
+            }
         } catch (SQLException e) {
             System.err.println("Error al guardar cliente: " + e.getMessage());
-            return false;
         }
+        return -1; 
     }
 
     public List<Cliente> listar() {
@@ -63,9 +72,7 @@ public class ClienteDAO {
                 c.setCorreo(resultado.getString("correo"));
                 listaClientes.add(c);
             }
-        } catch (SQLException e) {
-            System.err.println("Error al listar clientes: " + e.getMessage());
-        }
+        } catch (SQLException e) {}
         return listaClientes;
     }
     
@@ -87,12 +94,12 @@ public class ClienteDAO {
                     c.setNumeroIdentidad(resultado.getString("numero_identidad"));
                     c.setNombre(resultado.getString("nombre"));
                     c.setApellido(resultado.getString("apellido"));
+                    c.setTelefono(resultado.getString("telefono"));
+                    c.setCorreo(resultado.getString("correo"));
                     listaClientes.add(c);
                 }
             }
-        } catch (SQLException e) {
-            System.err.println("Error en la búsqueda en vivo: " + e.getMessage());
-        }
+        } catch (SQLException e) {}
         return listaClientes;
     }
 
@@ -105,77 +112,64 @@ public class ClienteDAO {
             comando.setString(2, cliente.getNombre());
             comando.setString(3, cliente.getApellido());
             
-            // Envío seguro de nulos en actualización
+            // --- MAGIA ANTI-NULL EN ACTUALIZACIÓN ---
             if (cliente.getTelefono() == null || cliente.getTelefono().trim().isEmpty()) {
-                comando.setNull(4, java.sql.Types.VARCHAR);
+                String rellenoTel = "SN-" + cliente.getNumeroIdentidad();
+                if (rellenoTel.length() > 20) rellenoTel = rellenoTel.substring(0, 20);
+                comando.setString(4, rellenoTel);
             } else {
                 comando.setString(4, cliente.getTelefono().trim());
             }
             
             if (cliente.getCorreo() == null || cliente.getCorreo().trim().isEmpty()) {
-                comando.setNull(5, java.sql.Types.VARCHAR);
+                String rellenoCor = "SN-" + cliente.getNumeroIdentidad() + "@sairtech.com";
+                if (rellenoCor.length() > 50) rellenoCor = rellenoCor.substring(0, 50);
+                comando.setString(5, rellenoCor);
             } else {
                 comando.setString(5, cliente.getCorreo().trim());
             }
+            // -----------------------------------------
             
             comando.setInt(6, cliente.getIdCliente());
-            
             return comando.executeUpdate() > 0;
             
-        } catch (SQLException e) {
+        } catch (SQLException e) { 
             System.err.println("Error al actualizar cliente: " + e.getMessage());
-            return false;
+            return false; 
         }
     }
 
     public boolean eliminar(int idCliente) {
-        // Soft delete: Ocultamos los datos sensibles pero conservamos el registro para el historial contable
         String sql = "UPDATE Clientes SET numero_identidad = CONCAT('0000-0000-', id_cliente), nombre = '***', apellido = 'ELIMINADO', telefono = '********', correo = '***' WHERE id_cliente = ?";
-        
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
-            
             comando.setInt(1, idCliente);
             return comando.executeUpdate() > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("Error al eliminar cliente: " + e.getMessage());
-            return false;
-        }
+        } catch (SQLException e) { return false; }
     }
     
     public boolean tieneHistorial(int idCliente) {
         String sql = "SELECT COUNT(*) FROM Equipos_Registrados WHERE id_cliente = ?";
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
-             
             comando.setInt(1, idCliente);
             try (ResultSet rs = comando.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
+                if (rs.next()) return rs.getInt(1) > 0;
             }
-        } catch (SQLException e) {
-            System.err.println("Error al comprobar historial del cliente: " + e.getMessage());
-        }
+        } catch (SQLException e) {}
         return false;
     }
-
-    // --- MÉTODOS DE VALIDACIÓN DE DUPLICADOS ---
 
     public boolean existeIdentidad(String identidad, int idClienteAIgnorar) {
         String sql = "SELECT COUNT(*) FROM Clientes WHERE numero_identidad = ? AND id_cliente != ? AND apellido != 'ELIMINADO'";
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
-            
             comando.setString(1, identidad);
             comando.setInt(2, idClienteAIgnorar);
             try (ResultSet rs = comando.executeQuery()) {
                 if (rs.next()) return rs.getInt(1) > 0;
             }
-        } catch (SQLException e) {
-            System.err.println("Error al validar identidad duplicada: " + e.getMessage());
-        }
+        } catch (SQLException e) {}
         return false;
     }
 
@@ -183,15 +177,12 @@ public class ClienteDAO {
         String sql = "SELECT COUNT(*) FROM Clientes WHERE telefono = ? AND id_cliente != ? AND apellido != 'ELIMINADO'";
         try (Connection conexion = factory.getConexion();
              PreparedStatement comando = conexion.prepareStatement(sql)) {
-            
             comando.setString(1, telefono);
             comando.setInt(2, idClienteAIgnorar);
             try (ResultSet rs = comando.executeQuery()) {
                 if (rs.next()) return rs.getInt(1) > 0;
             }
-        } catch (SQLException e) {
-            System.err.println("Error al validar teléfono duplicado: " + e.getMessage());
-        }
+        } catch (SQLException e) {}
         return false;
     }
 }

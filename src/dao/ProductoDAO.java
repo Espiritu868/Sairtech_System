@@ -104,13 +104,52 @@ public class ProductoDAO {
         } catch (SQLException e) { return false; }
     }
 
-    public List<Object[]> buscarProductoCompleto(String textoBusqueda) {
+    // --- MODIFICADO: Agregado el filtro booleano para papelera ---
+    public List<Object[]> buscarProductoCompleto(String textoBusqueda, boolean verEliminados) {
         List<Object[]> lista = new ArrayList<>();
-        // NOTA: Se insertó 'p.ubicacion' en el índice 4 del ResultSet
+        int filtroEliminado = verEliminados ? 1 : 0;
+        
         String sql = "SELECT p.id_producto, p.codigo_barras, p.nombre_producto, c.nombre_categoria, p.ubicacion, p.precio_compra, p.precio_venta, p.stock, p.stock_minimo, p.id_proveedor, p.aplica_precio_tecnico, p.precio_tecnico " +
                      "FROM productos p " +
                      "JOIN categorias_productos c ON p.id_categoria = c.id_categoria " +
-                     "WHERE p.nombre_producto LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?";
+                     "WHERE p.eliminado = ? AND (p.nombre_producto LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?)";
+                     
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+             
+            String param = "%" + textoBusqueda + "%";
+            ps.setInt(1, filtroEliminado);
+            ps.setString(2, param); ps.setString(3, param); ps.setString(4, param);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Object[] fila = new Object[12]; 
+                    fila[0] = rs.getInt("id_producto");
+                    fila[1] = rs.getString("codigo_barras");
+                    fila[2] = rs.getString("nombre_producto");
+                    fila[3] = rs.getString("nombre_categoria");
+                    fila[4] = rs.getString("ubicacion"); 
+                    fila[5] = rs.getDouble("precio_compra");
+                    fila[6] = rs.getDouble("precio_venta");
+                    fila[7] = rs.getInt("stock");
+                    fila[8] = rs.getInt("stock_minimo");
+                    fila[9] = rs.getInt("id_proveedor");
+                    fila[10] = rs.getBoolean("aplica_precio_tecnico"); 
+                    fila[11] = rs.getDouble("precio_tecnico");
+                    lista.add(fila);
+                }
+            }
+        } catch (SQLException e) {}
+        return lista;
+    }
+
+    // --- NUEVO: Exclusivo para Punto de Venta (Oculta stock 0 y eliminados) ---
+    public List<Object[]> buscarProductoParaVenta(String textoBusqueda) {
+        List<Object[]> lista = new ArrayList<>();
+        String sql = "SELECT p.id_producto, p.codigo_barras, p.nombre_producto, c.nombre_categoria, p.ubicacion, p.precio_compra, p.precio_venta, p.stock, p.stock_minimo, p.id_proveedor, p.aplica_precio_tecnico, p.precio_tecnico " +
+                     "FROM productos p " +
+                     "JOIN categorias_productos c ON p.id_categoria = c.id_categoria " +
+                     "WHERE p.eliminado = 0 AND p.stock > 0 AND (p.nombre_producto LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?)";
                      
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -120,12 +159,12 @@ public class ProductoDAO {
             
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Object[] fila = new Object[12]; // Aumentamos a 12
+                    Object[] fila = new Object[12]; 
                     fila[0] = rs.getInt("id_producto");
                     fila[1] = rs.getString("codigo_barras");
                     fila[2] = rs.getString("nombre_producto");
                     fila[3] = rs.getString("nombre_categoria");
-                    fila[4] = rs.getString("ubicacion"); // <--- NUEVO EN EL ARREGLO
+                    fila[4] = rs.getString("ubicacion"); 
                     fila[5] = rs.getDouble("precio_compra");
                     fila[6] = rs.getDouble("precio_venta");
                     fila[7] = rs.getInt("stock");
@@ -151,8 +190,9 @@ public class ProductoDAO {
         } catch (SQLException e) { return false; }
     }
     
+    // --- MODIFICADO: Solo trae productos si no están eliminados ---
     public Producto buscarPorCodigo(String codigoBarras) {
-        String sql = "SELECT * FROM productos WHERE codigo_barras = ?";
+        String sql = "SELECT * FROM productos WHERE codigo_barras = ? AND eliminado = 0";
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
              
@@ -174,5 +214,25 @@ public class ProductoDAO {
             }
         } catch (SQLException e) {}
         return null; 
+    }
+
+    // --- NUEVO: Borrado Lógico ---
+    public boolean eliminar(int idProducto) {
+        String sql = "UPDATE productos SET eliminado = 1 WHERE id_producto = ?";
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { return false; }
+    }
+
+    // --- NUEVO: Restaurar Producto ---
+    public boolean restaurar(int idProducto) {
+        String sql = "UPDATE productos SET eliminado = 0 WHERE id_producto = ?";
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { return false; }
     }
 }
