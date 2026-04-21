@@ -32,7 +32,7 @@ public class PanelIngresoEquipos extends javax.swing.JPanel {
 
     // Componentes Paso 1 (Cliente y Equipo)
     private JTextField txtBuscarCliente;
-    private JButton btnCrearCliente; // <--- NUEVO BOTÓN
+    private JButton btnCrearCliente; // <--- BOTÓN
     private JTable tablaClientes;
     private JComboBox<String> cmbTipo;
     private JComboBox<String> cmbMarca;
@@ -94,17 +94,16 @@ public class PanelIngresoEquipos extends javax.swing.JPanel {
         txtBuscarCliente.setPreferredSize(new Dimension(0, 40));
         txtBuscarCliente.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent evt) {
+                // Solo filtramos la tabla
                 cargarTablaClientes(txtBuscarCliente.getText().trim());
-                // BORRAMOS LA LLAMADA A validarBotonCrearCliente()
             }
         });
 
-        // --- BOTÓN CREAR CLIENTE (AHORA ES PERMANENTE) ---
+        // --- BOTÓN CREAR CLIENTE (SIEMPRE VISIBLE) ---
         btnCrearCliente = new JButton("+ Nuevo Cliente");
         btnCrearCliente.setBackground(new Color(46, 204, 113));
         btnCrearCliente.setForeground(Color.WHITE);
-        btnCrearCliente.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btnCrearCliente.setPreferredSize(new Dimension(150, 40)); // Le damos un tamaño fijo
+        btnCrearCliente.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnCrearCliente.setFocusPainted(false);
         btnCrearCliente.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btnCrearCliente.addActionListener(e -> abrirModalCrearCliente());
@@ -129,7 +128,6 @@ public class PanelIngresoEquipos extends javax.swing.JPanel {
                 if (fila >= 0) {
                     idClienteSeleccionado = Integer.parseInt(tablaClientes.getValueAt(fila, 0).toString());
                     txtBuscarCliente.setText(tablaClientes.getValueAt(fila, 2).toString());
-                    btnCrearCliente.setVisible(false); // Oculta el botón si ya seleccionó a alguien
                 }
             }
         });
@@ -302,8 +300,13 @@ public class PanelIngresoEquipos extends javax.swing.JPanel {
         return panelPaso2;
     }
 
-    // --- MODAL DE CREACIÓN RÁPIDA (Corregido sin LimiteDocument) ---
+    // --- MODAL DE CREACIÓN RÁPIDA ---
     private void abrirModalCrearCliente() {
+        // --- LIMPIEZA AUTOMÁTICA ---
+        txtBuscarCliente.setText("");
+        cargarTablaClientes(""); 
+        // ---------------------------
+
         // 1. Crear el JDialog (Ventana Flotante Personalizada)
         javax.swing.JDialog dialogo = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Registrar Nuevo Cliente", true);
         dialogo.setSize(450, 550);
@@ -406,16 +409,6 @@ public class PanelIngresoEquipos extends javax.swing.JPanel {
         // Agregamos el panel al diálogo y lo mostramos
         dialogo.add(panelFondo);
         dialogo.setVisible(true);
-    }
-
-    private void validarBotonCrearCliente() {
-        if (txtBuscarCliente.getText().trim().isEmpty()) {
-            btnCrearCliente.setVisible(false);
-        } else if (tablaClientes.getRowCount() == 0) {
-            btnCrearCliente.setVisible(true);
-        } else {
-            btnCrearCliente.setVisible(false);
-        }
     }
 
     private void configurarTextArea(JTextArea txt, String fantasma) {
@@ -556,7 +549,6 @@ public class PanelIngresoEquipos extends javax.swing.JPanel {
         txtBuscarCliente.setText("");
         idClienteSeleccionado = -1;
         cargarTablaClientes("");
-        btnCrearCliente.setVisible(false); // Esconder el botón
         cmbTipo.setSelectedIndex(0);
         txtModelo.setText("");
         txtImei.setText("");
@@ -621,20 +613,29 @@ public class PanelIngresoEquipos extends javax.swing.JPanel {
         java.util.List<modelo.Cliente> lista = filtro.isEmpty() ? daoCliente.listar() : daoCliente.buscar(filtro);
         java.util.Collections.reverse(lista);
 
-        DefaultTableModel modeloTabla = new DefaultTableModel(new Object[]{"ID", "Identidad", "Cliente"}, 0) {
+        DefaultTableModel modeloTabla = new DefaultTableModel(new Object[]{"ID", "Identidad", "Cliente", "Teléfono"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
 
         for (modelo.Cliente c : lista) {
-            modeloTabla.addRow(new Object[]{c.getIdCliente(), c.getNumeroIdentidad(), c.getNombre() + " " + c.getApellido()});
+            String iden = c.getNumeroIdentidad();
+            String tel = c.getTelefono();
+            
+            // --- CAPA VISUAL: OCULTAR RELLENOS DEL SISTEMA ---
+            if (tel == null || tel.trim().isEmpty() || tel.contains(iden) || tel.equals("N/A")) {
+                tel = "N/A";
+            }
+            // -------------------------------------------------
+            
+            modeloTabla.addRow(new Object[]{c.getIdCliente(), iden, c.getNombre() + " " + c.getApellido(), tel});
         }
         
-        // --- YA CORREGIDO: Manda a llamar a tablaClientes ---
         tablaClientes.setModel(modeloTabla);
         if (tablaClientes.getColumnModel().getColumnCount() > 0) {
             tablaClientes.getColumnModel().getColumn(0).setPreferredWidth(40);
             tablaClientes.getColumnModel().getColumn(1).setPreferredWidth(120);
             tablaClientes.getColumnModel().getColumn(2).setPreferredWidth(250);
+            tablaClientes.getColumnModel().getColumn(3).setPreferredWidth(100);
         }
     }
     

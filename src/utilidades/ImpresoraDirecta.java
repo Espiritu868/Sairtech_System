@@ -122,7 +122,7 @@ public class ImpresoraDirecta implements Printable {
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
                 g2d.setColor(Color.BLACK);
 
-                int y = 12; // Empezamos más arriba
+                int y = 6; // Ajuste aquí: Arrancamos casi al ras del papel
                 g2d.setFont(new Font("SansSerif", Font.BOLD, 10));
                 g2d.drawString("ORDEN: " + idOrden, 5, y); 
                 
@@ -246,7 +246,7 @@ public class ImpresoraDirecta implements Printable {
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
                 g2d.setColor(Color.BLACK);
 
-                int y = 12; 
+                int y = 8;  // Ajuste aquí: Reducido para quitar el espacio en blanco de arriba
                 g2d.setFont(new Font("SansSerif", Font.BOLD, 12)); // Encabezado un poco más pequeño
                 centrarTexto(g2d, "SAIRTECH", width, y); y += 12;
                 

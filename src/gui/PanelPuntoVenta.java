@@ -58,12 +58,15 @@ public class PanelPuntoVenta extends JPanel {
     private JButton btnCobrar;
     private JButton btnQuitarItem;
     private JButton btnModificarCant; 
-    private JButton btnEditarItem; // Antes se llamaba btnEditarOrden
+    private JButton btnEditarItem; 
 
     private double totalVenta = 0.0;
     private int idOrdenVinculada = -1; 
     private int idClienteSeleccionado = 0; 
     private String modoActual = ""; 
+    
+    // --- NUEVA VARIABLE: MEMORIA DE FIRMA TEMPORAL ---
+    private String[] firmaTemporal = null; 
 
     public PanelPuntoVenta(String modo) {
         this.modoActual = modo;
@@ -211,6 +214,7 @@ public class PanelPuntoVenta extends JPanel {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         tablaCarrito = new JTable(modeloCarrito);
+        tablaCarrito.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         tablaCarrito.setRowHeight(30); tablaCarrito.setFont(new Font("Segoe UI", Font.PLAIN, 14)); 
         tablaCarrito.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
         
@@ -225,14 +229,30 @@ public class PanelPuntoVenta extends JPanel {
         btnModificarCant = new JButton("Modificar Cant."); btnModificarCant.setBackground(new Color(52, 152, 219)); 
         btnModificarCant.setForeground(Color.WHITE); btnModificarCant.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnModificarCant.setPreferredSize(new Dimension(160, 35)); btnModificarCant.setFocusPainted(false);
+        btnModificarCant.setEnabled(false); // Apagado por defecto
         btnModificarCant.addActionListener(e -> modificarCantidadCarrito());
+
+        tablaCarrito.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int fila = tablaCarrito.getSelectedRow();
+                if (fila >= 0) {
+                    String descripcion = modeloCarrito.getValueAt(fila, 1).toString();
+                    if (descripcion.startsWith("Orden #")) {
+                        btnModificarCant.setEnabled(false); // Apagar si es orden
+                    } else {
+                        btnModificarCant.setEnabled(true);  // Encender si es producto normal
+                    }
+                } else {
+                    btnModificarCant.setEnabled(false);
+                }
+            }
+        });
 
         btnQuitarItem = new JButton("Quitar Producto"); btnQuitarItem.setBackground(new Color(231, 76, 60)); 
         btnQuitarItem.setForeground(Color.WHITE); btnQuitarItem.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnQuitarItem.setPreferredSize(new Dimension(160, 35)); btnQuitarItem.setFocusPainted(false);
         btnQuitarItem.addActionListener(e -> quitarItemCarrito());
 
-        // --- NUEVO BOTÓN PARA EDITAR ORDEN ---
         btnEditarItem = new JButton("Modificar Precio / Detalles"); 
         btnEditarItem.setBackground(new Color(243, 156, 18)); 
         btnEditarItem.setForeground(Color.WHITE); 
@@ -241,7 +261,6 @@ public class PanelPuntoVenta extends JPanel {
         btnEditarItem.setFocusPainted(false);
         btnEditarItem.addActionListener(e -> editarItemSeleccionado());
 
-        // Agregamos el botón nuevo al panel
         JPanel panelBotonesTabla = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 10, 0));
         panelBotonesTabla.setOpaque(false); panelBotonesTabla.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
         
@@ -338,7 +357,7 @@ public class PanelPuntoVenta extends JPanel {
 
     private void seleccionarProductoManual() {
         dao.ProductoDAO daoP = new dao.ProductoDAO();
-        List<Object[]> resultados = daoP.buscarProductoParaVenta("");                                                                                                                                                                                                                           
+        List<Object[]> resultados = daoP.buscarProductoParaVenta("");                                                                                                                                                                                                                                                                                       
         
         javax.swing.JDialog dialog = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Inventario General", true);
         dialog.setSize(800, 450); dialog.setLocationRelativeTo(this); dialog.setLayout(new BorderLayout(10, 10)); dialog.getContentPane().setBackground(Color.WHITE);
@@ -386,7 +405,6 @@ public class PanelPuntoVenta extends JPanel {
                         nombreDesc += " (Precio Gremio)";
                     }
                     
-                    // ID NORMAL
                     agregarAlCarrito((int)productoCompleto[0], nombreDesc, 1, precioCobrar, stock);
                     dialog.dispose();
                 }
@@ -436,7 +454,6 @@ public class PanelPuntoVenta extends JPanel {
                         return;
                     }
                     
-                    // --- ID VIRTUAL PARA KNIJICO (70000 + ID) ---
                     int idVirtual = 70000 + idOriginal;
                     
                     double precioACobrar = chkPrecioTecnico.isSelected() ? Double.parseDouble(modK.getValueAt(filaReal, 5).toString()) : Double.parseDouble(modK.getValueAt(filaReal, 4).toString());
@@ -456,7 +473,6 @@ public class PanelPuntoVenta extends JPanel {
         String codigo = txtCodigoBarras.getText().trim();
         if (codigo.isEmpty()) return;
 
-        // 1. Intentamos buscar en Productos Normales
         dao.ProductoDAO daoProd = new dao.ProductoDAO();
         modelo.Producto p = daoProd.buscarPorCodigo(codigo);
 
@@ -475,7 +491,6 @@ public class PanelPuntoVenta extends JPanel {
             }
         } 
         else {
-            // 2. Si no es producto, probamos buscar en Pantallas Knijico
             dao.KnijicoDAO daoK = new dao.KnijicoDAO();
             Object[] pantalla = daoK.buscarPorCodigoBarra(codigo); 
 
@@ -570,24 +585,21 @@ public class PanelPuntoVenta extends JPanel {
     private void quitarItemCarrito() {
         int fila = tablaCarrito.getSelectedRow();
         if (fila >= 0) {
-            // Verificamos si estamos quitando la orden vinculada
             if (modeloCarrito.getValueAt(fila, 1).toString().startsWith("Orden #")) {
                 idOrdenVinculada = -1; 
+                firmaTemporal = null; // --- BORRAMOS FIRMA AL QUITAR ORDEN ---
+                
                 txtBuscarOrden.setEnabled(true); 
                 btnVincularOrden.setEnabled(true);
                 
-                // Restaurar tabla de pendientes
                 tablaPendientes.setEnabled(true);
                 tablaPendientes.setBackground(Color.WHITE);
                 tablaPendientes.setForeground(Color.BLACK);
                 
-                // --- RESTAURAR CLIENTE ---
                 idClienteSeleccionado = 0;
                 txtClienteAsignado.setText("Consumidor Final");
-                // -------------------------
             }
             
-            // ELIMINACIÓN FÍSICA
             modeloCarrito.removeRow(fila); 
             recalcularTotal();
         } else {
@@ -623,12 +635,10 @@ public class PanelPuntoVenta extends JPanel {
 
         idOrdenVinculada = Integer.parseInt(ord[0].toString());
         
-        // --- MAGIA: ASIGNAR CLIENTE AUTOMÁTICAMENTE ---
-        txtClienteAsignado.setText(ord[1].toString()); // ord[1] es el nombre completo
+        txtClienteAsignado.setText(ord[1].toString()); 
         if (ord.length > 7 && ord[7] != null) {
-            idClienteSeleccionado = Integer.parseInt(ord[7].toString()); // ord[7] es el id_cliente
+            idClienteSeleccionado = Integer.parseInt(ord[7].toString()); 
         }
-        // ----------------------------------------------
 
         agregarAlCarrito(0, "Orden #" + idOrdenVinculada + " - Rep: " + ord[2], 1, Double.parseDouble(ord[5].toString()), 1); 
         
@@ -655,21 +665,24 @@ public class PanelPuntoVenta extends JPanel {
             } catch (Exception e) { return; }
         }
 
-        // --- SOLICITAR FIRMA ANTES DE COBRAR ---
-        String[] datosFirma = solicitarFirmaUsuario();
-        if (datosFirma == null) {
-            return; // Si cancela o pone mal la clave, se aborta el cobro
+        // --- LÓGICA DE FIRMA INTELIGENTE ---
+        String[] datosFirma;
+        if (firmaTemporal != null) {
+            datosFirma = firmaTemporal; // Usamos la firma que ya puso al editar
+        } else {
+            datosFirma = solicitarFirmaUsuario(); // Pedimos firma si no ha editado
+            if (datosFirma == null) return; 
         }
+        
         int idCajeroFirma = Integer.parseInt(datosFirma[0]);
         String nombreCajeroFirma = datosFirma[1];
-        // ---------------------------------------
+        // -----------------------------------
 
         btnCobrar.setEnabled(false); setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR));
         
         modelo.Venta venta = new modelo.Venta();
         venta.setIdCliente(idClienteSeleccionado); 
         
-        // AQUÍ REEMPLAZAMOS EL USUARIO ACTIVO POR EL QUE ACABA DE FIRMAR
         venta.setIdUsuario(idCajeroFirma); 
         
         venta.setIdOrden(idOrdenVinculada); venta.setTotal(totalVenta); 
@@ -681,9 +694,9 @@ public class PanelPuntoVenta extends JPanel {
             int idCarrito = Integer.parseInt(modeloCarrito.getValueAt(i, 0).toString());
             
             if (idCarrito >= 70000) {
-                dv.setIdProducto(idCarrito - 70000); // ID Real de Knijico
+                dv.setIdProducto(idCarrito - 70000); 
             } else {
-                dv.setIdProducto(idCarrito); // ID Normal
+                dv.setIdProducto(idCarrito); 
             }
             
             dv.setDescripcion(modeloCarrito.getValueAt(i, 1).toString());
@@ -700,7 +713,6 @@ public class PanelPuntoVenta extends JPanel {
             JOptionPane.showMessageDialog(this, "¡Éxito!\nTransacción #" + idRecibo + "\nCajero/Técnico: " + nombreCajeroFirma.toUpperCase());
             
             if (idOrdenVinculada != -1) {
-                // MODO ENTREGA DE TALLER: GENERAR EL PDF TAMAÑO CARTA Y MARCAR ENTREGADO
                 try {
                     dao.OrdenReparacionDAO daoOrden = new dao.OrdenReparacionDAO();
                     String[] textos = daoOrden.obtenerTextosOrden(idOrdenVinculada);
@@ -724,7 +736,6 @@ public class PanelPuntoVenta extends JPanel {
                     
                     String equipoConClave = modOr + "  |  Clave: " + claveOr;
                     
-                    // EL PDF AHORA IMPRIME EL NOMBRE DEL QUE PUSO LA CLAVE
                     String tecnico = nombreCajeroFirma; 
                     
                     utilidades.GeneradorPDF generador = new utilidades.GeneradorPDF();
@@ -735,7 +746,6 @@ public class PanelPuntoVenta extends JPanel {
                         tecnico, trabOr, false, tipoOr, true
                     );
                     
-                    // Actualizamos la orden y REGISTRAMOS QUIÉN ENTREGÓ
                     daoOrden.actualizarEstadoYCosto(idOrdenVinculada, "Entregado", totalVenta);
                     daoOrden.marcarComoEntregado(idOrdenVinculada, idCajeroFirma);
 
@@ -743,15 +753,15 @@ public class PanelPuntoVenta extends JPanel {
                     System.err.println("Error al crear PDF de entrega: " + ex.getMessage());
                 }
             } else {
-                // MODO VENTA MOSTRADOR: RECIBO TÉRMICO PEQUEÑO
-                // Como VentaDAO guardó el ID de quien firmó, ImpresoraDirecta sacará su nombre automáticamente en el ticket
                 utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta(); 
                 impresora.imprimirReciboVenta(idRecibo);
             }
             
-            // --- RESETEO DE CARRITO ---
+            // --- RESETEO GENERAL AL FINALIZAR VENTA ---
             modeloCarrito.setRowCount(0); recalcularTotal();
-            idOrdenVinculada = -1; txtBuscarOrden.setEnabled(true); btnVincularOrden.setEnabled(true);
+            idOrdenVinculada = -1; 
+            firmaTemporal = null; // --- BORRAMOS FIRMA AL FINALIZAR COBRO ---
+            txtBuscarOrden.setEnabled(true); btnVincularOrden.setEnabled(true);
             tablaPendientes.setEnabled(true); tablaPendientes.setBackground(Color.WHITE); tablaPendientes.setForeground(Color.BLACK);
             idClienteSeleccionado = 0; txtClienteAsignado.setText("Consumidor Final");
             cargarOrdenesPendientesVisuales(); 
@@ -771,11 +781,9 @@ public class PanelPuntoVenta extends JPanel {
             String clave = new String(txtPass.getPassword());
             dao.UsuarioDAO daoUsuario = new dao.UsuarioDAO();
             
-            // Buscamos quién es el dueño de esa contraseña
             String nombreTecnico = daoUsuario.obtenerUsuarioPorClave(clave);
             
             if (nombreTecnico != null) {
-                // Obtenemos su ID para guardarlo en la base de datos
                 int idTecnico = daoUsuario.obtenerIdPorNombre(nombreTecnico);
                 return new String[]{String.valueOf(idTecnico), nombreTecnico}; 
             } else {
@@ -786,7 +794,6 @@ public class PanelPuntoVenta extends JPanel {
         return null;
     }
     
-    // 1. EL CEREBRO: Decide qué tipo de edición abrir dependiendo de lo que selecciones
     private void editarItemSeleccionado() {
         int fila = tablaCarrito.getSelectedRow();
         if (fila < 0) {
@@ -797,41 +804,84 @@ public class PanelPuntoVenta extends JPanel {
         String descripcion = modeloCarrito.getValueAt(fila, 1).toString();
 
         if (descripcion.startsWith("Orden #")) {
-            // Es una reparación de taller: Pide clave y abre el editor completo
             editarDetallesOrden(fila);
         } else {
-            // Es un producto normal del mostrador: Solo cambia el precio sin pedir clave
             modificarPrecioProductoLibre(fila, descripcion);
         }
     }
 
-    // 2. EDICIÓN LIBRE PARA MOSTRADOR (Cables, cargadores, etc.)
     private void modificarPrecioProductoLibre(int filaCarrito, String descripcion) {
         String precioActual = modeloCarrito.getValueAt(filaCarrito, 3).toString();
-        String nuevoPrecioStr = JOptionPane.showInputDialog(this, "Nuevo precio a cobrar para:\n" + descripcion, precioActual);
         
-        if (nuevoPrecioStr != null && !nuevoPrecioStr.trim().isEmpty()) {
+        javax.swing.JDialog dialogo = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Modificar Precio Manual", true);
+        dialogo.setSize(400, 220);
+        dialogo.setLocationRelativeTo(this);
+        dialogo.setResizable(false);
+
+        JPanel panelFondo = new JPanel(new GridBagLayout());
+        panelFondo.setBackground(Color.WHITE);
+        panelFondo.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.insets = new Insets(5, 0, 5, 0); gbc.weightx = 1.0; gbc.gridx = 0;
+
+        JLabel lblTitulo = new JLabel("Ajuste de Precio");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblTitulo.setForeground(new Color(44, 62, 80));
+        
+        JLabel lblDesc = new JLabel(descripcion.length() > 35 ? descripcion.substring(0,35) + "..." : descripcion);
+        lblDesc.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+        lblDesc.setForeground(Color.GRAY);
+
+        JTextField txtNuevoPrecio = new JTextField(precioActual);
+        txtNuevoPrecio.setPreferredSize(new Dimension(0, 35));
+        txtNuevoPrecio.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        txtNuevoPrecio.setForeground(new Color(39, 174, 96));
+
+        gbc.gridy = 0; panelFondo.add(lblTitulo, gbc);
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 15, 0); panelFondo.add(lblDesc, gbc);
+        gbc.gridy++; gbc.insets = new Insets(5, 0, 5, 0); panelFondo.add(new JLabel("Nuevo Precio a Cobrar (L.):"), gbc);
+        gbc.gridy++; panelFondo.add(txtNuevoPrecio, gbc);
+
+        JPanel panelBotones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
+        panelBotones.setOpaque(false);
+        
+        JButton btnCancelar = new JButton("Cancelar");
+        btnCancelar.setBackground(new Color(149, 165, 166)); btnCancelar.setForeground(Color.WHITE);
+        btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnCancelar.setFocusPainted(false);
+        btnCancelar.addActionListener(e -> dialogo.dispose());
+
+        JButton btnGuardar = new JButton("Guardar");
+        btnGuardar.setBackground(new Color(52, 152, 219)); btnGuardar.setForeground(Color.WHITE);
+        btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnGuardar.setFocusPainted(false);
+        
+        btnGuardar.addActionListener(e -> {
             try {
-                double nuevoPrecio = Double.parseDouble(nuevoPrecioStr.trim());
+                double nuevoPrecio = Double.parseDouble(txtNuevoPrecio.getText().trim());
                 if(nuevoPrecio < 0) throw new NumberFormatException();
                 
                 int cantidad = Integer.parseInt(modeloCarrito.getValueAt(filaCarrito, 2).toString());
-                
-                modeloCarrito.setValueAt(nuevoPrecio, filaCarrito, 3); // Precio Unitario
-                modeloCarrito.setValueAt(nuevoPrecio * cantidad, filaCarrito, 4); // Subtotal
+                modeloCarrito.setValueAt(nuevoPrecio, filaCarrito, 3);
+                modeloCarrito.setValueAt(nuevoPrecio * cantidad, filaCarrito, 4);
                 recalcularTotal();
-                
+                dialogo.dispose();
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Precio inválido.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialogo, "Precio inválido.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-        }
+        });
+
+        panelBotones.add(btnCancelar); panelBotones.add(btnGuardar);
+        panelBotones.setPreferredSize(new Dimension(0, 40));
+
+        gbc.gridy++; gbc.insets = new Insets(15, 0, 0, 0); panelFondo.add(panelBotones, gbc);
+
+        dialogo.add(panelFondo);
+        dialogo.setVisible(true);
     }
 
-    // 3. EDICIÓN SEGURA PARA TALLER (Pide PIN y deja el Sello de Auditoría)
     private void editarDetallesOrden(int filaCarrito) {
         if (idOrdenVinculada == -1) return;
 
-        // --- CAPA DE SEGURIDAD PARA TALLER ---
         String[] datosFirma = solicitarFirmaUsuario();
         if (datosFirma == null) return; 
 
@@ -839,34 +889,78 @@ public class PanelPuntoVenta extends JPanel {
         String[] textosActuales = daoOrden.obtenerTextosOrden(idOrdenVinculada);
         double precioActual = Double.parseDouble(modeloCarrito.getValueAt(filaCarrito, 3).toString());
 
-        JTextField txtNuevoPrecio = new JTextField(String.valueOf(precioActual));
-        javax.swing.JTextArea txtProblema = new javax.swing.JTextArea(textosActuales[0] != null ? textosActuales[0] : "", 3, 20);
-        javax.swing.JTextArea txtTrabajo = new javax.swing.JTextArea(textosActuales[1] != null ? textosActuales[1] : "", 3, 20);
+        javax.swing.JDialog dialogo = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Modificar Orden de Taller", true);
+        dialogo.setSize(500, 550);
+        dialogo.setLocationRelativeTo(this);
+        dialogo.setResizable(false);
+
+        JPanel panelFondo = new JPanel(new GridBagLayout());
+        panelFondo.setBackground(Color.WHITE);
+        panelFondo.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH; gbc.insets = new Insets(5, 0, 5, 0); gbc.weightx = 1.0; gbc.gridx = 0;
+
+        JLabel lblTituloModal = new JLabel("Editar Orden #" + idOrdenVinculada);
+        lblTituloModal.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTituloModal.setForeground(new Color(44, 62, 80));
+        
+        JLabel lblAutoriza = new JLabel("Autorizado por: " + datosFirma[1].toUpperCase());
+        lblAutoriza.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        lblAutoriza.setForeground(new Color(149, 165, 166)); 
+
+        gbc.gridy = 0; gbc.insets = new Insets(0, 0, 2, 0); panelFondo.add(lblTituloModal, gbc);
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 15, 0); panelFondo.add(lblAutoriza, gbc);
+
+        JTextField txtNuevoPrecio = new JTextField(String.valueOf(precioActual)); 
+        txtNuevoPrecio.setPreferredSize(new Dimension(0, 35)); 
+        txtNuevoPrecio.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        txtNuevoPrecio.setForeground(new Color(39, 174, 96)); 
+
+        javax.swing.JTextArea txtProblema = new javax.swing.JTextArea(textosActuales[0] != null ? textosActuales[0] : "");
+        txtProblema.setLineWrap(true); txtProblema.setWrapStyleWord(true); txtProblema.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        javax.swing.JTextArea txtTrabajo = new javax.swing.JTextArea(textosActuales[1] != null ? textosActuales[1] : "");
+        txtTrabajo.setLineWrap(true); txtTrabajo.setWrapStyleWord(true); txtTrabajo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
         JTextField txtClave = new JTextField(textosActuales[2] != null ? textosActuales[2] : "");
+        txtClave.setPreferredSize(new Dimension(0, 35)); txtClave.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
-        txtProblema.setLineWrap(true); txtProblema.setWrapStyleWord(true);
-        txtTrabajo.setLineWrap(true); txtTrabajo.setWrapStyleWord(true);
+        gbc.insets = new Insets(5, 0, 2, 0);
+        gbc.gridy++; gbc.weighty = 0.0; panelFondo.add(new JLabel("Precio Final a Cobrar (L.):"), gbc); 
+        gbc.gridy++; panelFondo.add(txtNuevoPrecio, gbc);
+        
+        gbc.gridy++; panelFondo.add(new JLabel("Clave / Patrón del Equipo:"), gbc); 
+        gbc.gridy++; panelFondo.add(txtClave, gbc);
 
-        Object[] mensaje = {
-            "Técnico Autorizando: " + datosFirma[1].toUpperCase(), 
-            " ",
-            "Precio Final a Cobrar (L.):", txtNuevoPrecio,
-            "Problema Reportado:", new JScrollPane(txtProblema),
-            "Trabajo Realizado (Saldrá en el PDF):", new JScrollPane(txtTrabajo),
-            "Clave / Seguridad:", txtClave
-        };
+        gbc.gridy++; panelFondo.add(new JLabel("Problema Reportado:"), gbc); 
+        gbc.gridy++; gbc.weighty = 0.3; panelFondo.add(new JScrollPane(txtProblema), gbc);
 
-        int opcion = JOptionPane.showConfirmDialog(this, mensaje, "Modificar Orden #" + idOrdenVinculada, 
-                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        gbc.gridy++; gbc.weighty = 0.0; panelFondo.add(new JLabel("Trabajo Realizado (Saldrá en PDF):"), gbc); 
+        gbc.gridy++; gbc.weighty = 0.3; panelFondo.add(new JScrollPane(txtTrabajo), gbc);
 
-        if (opcion == JOptionPane.OK_OPTION) {
+        JPanel panelBotones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
+        panelBotones.setOpaque(false);
+        
+        JButton btnCancelar = new JButton("Cancelar");
+        btnCancelar.setBackground(new Color(149, 165, 166)); btnCancelar.setForeground(Color.WHITE);
+        btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnCancelar.setFocusPainted(false);
+        btnCancelar.addActionListener(e -> dialogo.dispose());
+
+        JButton btnGuardar = new JButton("Guardar Cambios");
+        btnGuardar.setBackground(new Color(243, 156, 18)); 
+        btnGuardar.setForeground(Color.WHITE);
+        btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnGuardar.setFocusPainted(false);
+        
+        btnGuardar.addActionListener(e -> {
             try {
                 double nuevoPrecio = Double.parseDouble(txtNuevoPrecio.getText().trim());
+                if (nuevoPrecio < 0) throw new NumberFormatException();
+
                 String nuevoProblema = txtProblema.getText().trim();
                 String nuevoTrabajo = txtTrabajo.getText().trim();
                 String nuevaClave = txtClave.getText().trim();
 
-                // SELLO DE AUDITORÍA
                 java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
                 String firmaAuditoria = "\n[Editado en caja por: " + datosFirma[1].toUpperCase() + " el " + sdf.format(new java.util.Date()) + "]";
                 nuevoTrabajo = nuevoTrabajo + firmaAuditoria;
@@ -878,12 +972,29 @@ public class PanelPuntoVenta extends JPanel {
                 modeloCarrito.setValueAt(nuevoPrecio, filaCarrito, 4);
                 recalcularTotal();
                 
-                JOptionPane.showMessageDialog(this, "Orden actualizada por " + datosFirma[1] + ".");
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "El precio ingresado no es válido.", "Error", JOptionPane.ERROR_MESSAGE);
+                // --- GUARDAMOS LA FIRMA EN MEMORIA TRAS UNA EDICIÓN EXITOSA ---
+                firmaTemporal = datosFirma; 
+                // --------------------------------------------------------------
+                
+                JOptionPane.showMessageDialog(dialogo, "Orden actualizada por " + datosFirma[1] + ".", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                dialogo.dispose(); 
+
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialogo, "El precio ingresado no es válido.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-        }
+        });
+
+        panelBotones.add(btnCancelar);
+        panelBotones.add(btnGuardar);
+        panelBotones.setPreferredSize(new Dimension(0, 45));
+
+        gbc.gridy++; gbc.weighty = 0.0; gbc.insets = new Insets(20, 0, 0, 0);
+        panelFondo.add(panelBotones, gbc);
+
+        dialogo.add(panelFondo);
+        dialogo.setVisible(true);
     }
+
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents

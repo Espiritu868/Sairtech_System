@@ -84,10 +84,20 @@ public class GeneradorPDF {
                                        String politicaGarantia, String nombreTecnico, boolean esRecepcion, String trabajo, 
                                        String claveExtraida, String tipoEquipo) throws Exception {
         
-        // --- REDUCCIÓN DRÁSTICA DEL LARGO DEL PDF (Antes 900) ---
-        // 600 para recepción (más términos legales), 500 para entrega
-        float altoPDF = esRecepcion ? 600f : 500f;
-        Document documento = new Document(new Rectangle(210, altoPDF), 12, 12, 10, 10); // Márgenes más pequeños
+        // --- SOLUCIÓN: CÁLCULO DE ALTURA DINÁMICA ---
+        int largoProblema = (problema != null) ? problema.length() : 0;
+        int largoTrabajo = (trabajo != null) ? trabajo.length() : 0;
+        int largoTotal = largoProblema + largoTrabajo;
+        
+        // Sumamos unos 12 puntos de altura por cada 30 letras que escribas
+        float alturaExtra = (largoTotal / 30f) * 12f;
+        
+        // 600 para recepción (más términos legales), 500 para entrega, más lo que ocupe el texto
+        float altoPDF = (esRecepcion ? 600f : 500f) + alturaExtra;
+        
+        // Aplicamos el alto dinámico y los márgenes ajustados (5 arriba, 2 abajo)
+        Document documento = new Document(new Rectangle(210, altoPDF), 12, 12, 5, 2); 
+        // ---------------------------------------------
         
         PdfWriter.getInstance(documento, new FileOutputStream(ruta));
         documento.open();
