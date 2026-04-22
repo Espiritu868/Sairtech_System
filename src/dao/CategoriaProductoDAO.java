@@ -29,11 +29,29 @@ public class CategoriaProductoDAO {
                 c.setIdCategoria(rs.getInt("id_categoria"));
                 c.setNombreCategoria(rs.getString("nombre_categoria"));
                 c.setDescripcion(rs.getString("descripcion"));
+                c.setDiasGarantia(rs.getInt("dias_garantia")); // <--- LO LEE DE LA BD
                 lista.add(c);
             }
         } catch (SQLException e) {
             System.err.println("Error al listar categorías: " + e.getMessage());
         }
         return lista;
+    }
+
+    // --- NUEVO MÉTODO PARA GUARDAR DESDE EL INVENTARIO ---
+    public boolean insertar(CategoriaProducto categoria) {
+        String sql = "INSERT INTO categorias_productos (nombre_categoria, descripcion, dias_garantia) VALUES (?, ?, ?)";
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+             
+            ps.setString(1, categoria.getNombreCategoria());
+            ps.setString(2, categoria.getDescripcion() != null ? categoria.getDescripcion() : "");
+            ps.setInt(3, categoria.getDiasGarantia());
+            
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error al insertar categoría: " + e.getMessage());
+            return false;
+        }
     }
 }

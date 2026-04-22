@@ -55,9 +55,9 @@ public class VentaDAO {
             }
 
             // 3. GUARDAR LOS DETALLES Y RESTAR INVENTARIO
-            String sqlDetalle = "INSERT INTO detalles_venta (id_venta, id_producto, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)";
+            String sqlDetalle = "INSERT INTO detalles_venta (id_venta, id_producto, descripcion, cantidad, precio_unitario, subtotal, imei, dias_garantia) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             
-            // --- NUEVO: PREPARAMOS LAS DOS RUTAS DE INVENTARIO ---
+            // --- PREPARAMOS LAS DOS RUTAS DE INVENTARIO ---
             String sqlRestarStockNormal = "UPDATE productos SET stock = stock - ? WHERE id_producto = ?";
             String sqlRestarStockKnijico = "UPDATE pantallas_knijico SET stock = stock - ? WHERE id_pantalla = ?";
             
@@ -72,11 +72,11 @@ public class VentaDAO {
                     int idProductoVenta = detalle.getIdProducto();
                     
                     if (idProductoVenta > 0) {
-                        psDetalle.setInt(2, idProductoVenta); // Guardamos el ID tal cual (puede ser 70005)
+                        psDetalle.setInt(2, idProductoVenta); // Guardamos el ID tal cual
                         
                         // --- LA MAGIA MATEMÁTICA PARA SEPARAR EL STOCK ---
                         if (idProductoVenta >= 70000) {
-                            // ES PANTALLA KNIJICO: Descubrimos su ID real restando 70000
+                            // ES PANTALLA KNIJICO
                             int idRealKnijico = idProductoVenta - 70000;
                             psStockKnijico.setInt(1, detalle.getCantidad());
                             psStockKnijico.setInt(2, idRealKnijico);
@@ -95,6 +95,11 @@ public class VentaDAO {
                     psDetalle.setInt(4, detalle.getCantidad());
                     psDetalle.setDouble(5, detalle.getPrecioUnitario());
                     psDetalle.setDouble(6, detalle.getSubtotal());
+                    
+                    // Guardamos IMEI y Días de Garantía (Si están vacíos, se guardan en blanco/cero)
+                    psDetalle.setString(7, detalle.getImei() != null ? detalle.getImei() : "");
+                    psDetalle.setInt(8, detalle.getDiasGarantia());
+                    
                     psDetalle.executeUpdate();
                 }
             }
@@ -140,15 +145,14 @@ public class VentaDAO {
     public List<Object[]> listarHistorialVentas(String busqueda) {
         List<Object[]> lista = new ArrayList<>();
         
-        // Hacemos que el WHERE busque coincidencias, PERO exigiendo que id_orden sea NULL
         String sql = "SELECT v.id_venta, v.fecha_venta, " +
                      "IFNULL(CONCAT(c.nombre, ' ', c.apellido), 'Consumidor Final') AS cliente, " +
                      "v.total, v.metodo_pago, u.usuario " +
                      "FROM ventas v " +
                      "LEFT JOIN clientes c ON v.id_cliente = c.id_cliente " +
                      "JOIN usuarios u ON v.id_usuario = u.id_usuario " +
-                     "WHERE v.id_orden IS NULL AND (" +  // <--- EL FILTRO MÁGICO Y LOS PARÉNTESIS
-                     "v.id_venta LIKE ? " +
+                     "WHERE v.id_orden IS NULL AND (" +
+                     "CAST(v.id_venta AS CHAR) LIKE ? " +
                      "OR v.fecha_venta LIKE ? " +
                      "OR IFNULL(CONCAT(c.nombre, ' ', c.apellido), 'Consumidor Final') LIKE ? " +
                      "OR CAST(v.total AS CHAR) LIKE ? " +
@@ -161,7 +165,6 @@ public class VentaDAO {
              
             String param = "%" + busqueda + "%";
             
-            // Como son 6 signos de interrogación (?), usamos un ciclo rápido para llenarlos todos
             for (int i = 1; i <= 6; i++) {
                 ps.setString(i, param);
             }
@@ -180,6 +183,57 @@ public class VentaDAO {
             }
         } catch (Exception e) {
             System.err.println("Error al listar historial de ventas: " + e.getMessage());
+        }
+        return lista;
+    }
+    
+    // =========================================================================
+    // LISTAR HISTORIAL DE GARANTIAS (Trae Categoría y Teléfono del Cliente)
+    // =========================================================================
+    public List<Object[]> listarGarantias(String busqueda) {
+        List<Object[]> lista = new ArrayList<>();
+        String sql = "SELECT v.id_venta, DATE_FORMAT(v.fecha_venta, '%d/%m/%Y %H:%i') as fecha_compra, " +
+                     "DATE_FORMAT(DATE_ADD(v.fecha_venta, INTERVAL dv.dias_garantia DAY), '%d/%m/%Y') as fecha_vence, " +
+                     "IFNULL(CONCAT(cl.nombre, ' ', cl.apellido), 'Consumidor Final') AS cliente, " +
+                     "dv.descripcion, dv.imei, " +
+                     "CASE WHEN DATE_ADD(v.fecha_venta, INTERVAL dv.dias_garantia DAY) >= CURRENT_DATE() THEN 'VIGENTE' ELSE 'VENCIDA' END as estado, " +
+                     "dv.precio_unitario, IFNULL(cat.nombre_categoria, 'ARTICULO') as categoria, IFNULL(cl.telefono, 'N/D') as telefono_cliente, dv.dias_garantia " +
+                     "FROM detalles_venta dv " +
+                     "JOIN ventas v ON dv.id_venta = v.id_venta " +
+                     "LEFT JOIN clientes cl ON v.id_cliente = cl.id_cliente " +
+                     "LEFT JOIN productos p ON dv.id_producto = p.id_producto " +
+                     "LEFT JOIN categorias_productos cat ON p.id_categoria = cat.id_categoria " +
+                     "WHERE dv.dias_garantia > 0 AND (" +
+                     "dv.imei LIKE ? OR CAST(v.id_venta AS CHAR) LIKE ? OR IFNULL(CONCAT(cl.nombre, ' ', cl.apellido), 'Consumidor Final') LIKE ?) " +
+                     "ORDER BY v.id_venta DESC";
+
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+             
+            String param = "%" + busqueda + "%";
+            ps.setString(1, param);
+            ps.setString(2, param);
+            ps.setString(3, param);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(new Object[]{
+                        rs.getInt("id_venta"),
+                        rs.getString("fecha_compra"),
+                        rs.getString("fecha_vence"),
+                        rs.getString("cliente"),
+                        rs.getString("descripcion"),
+                        rs.getString("imei"),
+                        rs.getString("estado"),
+                        rs.getDouble("precio_unitario"),
+                        rs.getString("categoria"),
+                        rs.getString("telefono_cliente"),
+                        rs.getInt("dias_garantia")
+                    });
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al listar garantias: " + e.getMessage());
         }
         return lista;
     }

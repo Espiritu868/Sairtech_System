@@ -8,8 +8,15 @@ public class DetalleVenta {
     private int cantidad;
     private double precioUnitario;
     private double subtotal;
+    
+    // --- NUEVAS VARIABLES DE GARANTÍA ---
+    private String imei;
+    private int diasGarantia;
 
-    public DetalleVenta() {}
+    public DetalleVenta() {
+        this.imei = ""; // Seguro por defecto
+        this.diasGarantia = 0;
+    }
 
     // Getters y Setters
     public int getIdDetalle() { return idDetalle; }
@@ -32,4 +39,10 @@ public class DetalleVenta {
 
     public double getSubtotal() { return subtotal; }
     public void setSubtotal(double subtotal) { this.subtotal = subtotal; }
+
+    public String getImei() { return imei; }
+    public void setImei(String imei) { this.imei = imei; }
+
+    public int getDiasGarantia() { return diasGarantia; }
+    public void setDiasGarantia(int diasGarantia) { this.diasGarantia = diasGarantia; }
 }

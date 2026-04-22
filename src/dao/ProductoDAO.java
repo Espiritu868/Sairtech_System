@@ -235,4 +235,17 @@ public class ProductoDAO {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { return false; }
     }
+    
+    // --- NUEVO: Consulta rápida para saber si pide IMEI ---
+    public int obtenerDiasGarantia(int idProducto) {
+        String sql = "SELECT c.dias_garantia FROM productos p JOIN categorias_productos c ON p.id_categoria = c.id_categoria WHERE p.id_producto = ?";
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("dias_garantia");
+            }
+        } catch (SQLException e) { System.err.println("Error garantía: " + e.getMessage()); }
+        return 0; // Si falla o no tiene, devuelve 0
+    }
 }

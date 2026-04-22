@@ -65,7 +65,6 @@ public class PanelPuntoVenta extends JPanel {
     private int idClienteSeleccionado = 0; 
     private String modoActual = ""; 
     
-    // --- NUEVA VARIABLE: MEMORIA DE FIRMA TEMPORAL ---
     private String[] firmaTemporal = null; 
 
     public PanelPuntoVenta(String modo) {
@@ -158,6 +157,7 @@ public class PanelPuntoVenta extends JPanel {
 
         panelOrden = new JPanel(new BorderLayout(5, 0)); panelOrden.setOpaque(false);
         txtBuscarOrden = new JTextField(); txtBuscarOrden.setPreferredSize(new Dimension(0, 35)); 
+        txtBuscarOrden.addActionListener(e -> vincularOrdenReparacion()); // AUTO-VINCULAR
         
         btnVincularOrden = new JButton("Vincular"); btnVincularOrden.setBackground(new Color(52, 152, 219));
         btnVincularOrden.setForeground(Color.WHITE); btnVincularOrden.setFocusPainted(false);
@@ -209,7 +209,8 @@ public class PanelPuntoVenta extends JPanel {
     private JPanel construirPanelCarrito() {
         JPanel panel = new JPanel(new BorderLayout(0, 15)); panel.setOpaque(false);
 
-        String[] columnas = {"ID", "Descripción", "Cant.", "Precio U.", "Subtotal", "StockMax"};
+        // Agregamos IMEI y DiasGarantia al modelo
+        String[] columnas = {"ID", "Descripción", "Cant.", "Precio U.", "Subtotal", "StockMax", "IMEI", "DiasGarantia"};
         modeloCarrito = new DefaultTableModel(columnas, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -220,9 +221,13 @@ public class PanelPuntoVenta extends JPanel {
         
         tablaCarrito.getColumnModel().getColumn(0).setPreferredWidth(50);
         tablaCarrito.getColumnModel().getColumn(1).setPreferredWidth(300);
-        tablaCarrito.getColumnModel().getColumn(5).setMinWidth(0);
-        tablaCarrito.getColumnModel().getColumn(5).setMaxWidth(0);
-        tablaCarrito.getColumnModel().getColumn(5).setWidth(0);
+        
+        // Ocultamos las últimas 3 columnas (StockMax, IMEI, DiasGarantia)
+        for(int i = 5; i <= 7; i++) {
+            tablaCarrito.getColumnModel().getColumn(i).setMinWidth(0);
+            tablaCarrito.getColumnModel().getColumn(i).setMaxWidth(0);
+            tablaCarrito.getColumnModel().getColumn(i).setWidth(0);
+        }
 
         JScrollPane scroll = new JScrollPane(tablaCarrito); scroll.getViewport().setBackground(Color.WHITE);
         
@@ -357,7 +362,7 @@ public class PanelPuntoVenta extends JPanel {
 
     private void seleccionarProductoManual() {
         dao.ProductoDAO daoP = new dao.ProductoDAO();
-        List<Object[]> resultados = daoP.buscarProductoParaVenta("");                                                                                                                                                                                                                                                                                       
+        List<Object[]> resultados = daoP.buscarProductoParaVenta("");                                                                                                                                                                                                                                                                                                                                                                                        
         
         javax.swing.JDialog dialog = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Inventario General", true);
         dialog.setSize(800, 450); dialog.setLocationRelativeTo(this); dialog.setLayout(new BorderLayout(10, 10)); dialog.getContentPane().setBackground(Color.WHITE);
@@ -405,7 +410,25 @@ public class PanelPuntoVenta extends JPanel {
                         nombreDesc += " (Precio Gremio)";
                     }
                     
-                    agregarAlCarrito((int)productoCompleto[0], nombreDesc, 1, precioCobrar, stock);
+                    // --- INTERCEPTOR DE GARANTÍA PARA BÚSQUEDA MANUAL ---
+                    int idProducto = (int)productoCompleto[0];
+                    int diasGarantia = daoP.obtenerDiasGarantia(idProducto);
+                    String imei = "";
+                    
+                    if (diasGarantia > 0) {
+                        imei = JOptionPane.showInputDialog(dialog, 
+                            "El equipo tiene " + diasGarantia + " días de garantía.\nIngrese el IMEI / Serie:", 
+                            "Garantía", JOptionPane.WARNING_MESSAGE);
+                            
+                        if (imei == null || imei.trim().isEmpty()) {
+                            JOptionPane.showMessageDialog(dialog, "Venta cancelada. El IMEI es obligatorio.");
+                            return; 
+                        }
+                        nombreDesc += " | IMEI: " + imei; 
+                    }
+                    // ----------------------------------------------------
+                    
+                    agregarAlCarrito(idProducto, nombreDesc, 1, precioCobrar, stock, imei, diasGarantia);
                     dialog.dispose();
                 }
             }
@@ -487,7 +510,29 @@ public class PanelPuntoVenta extends JPanel {
                     precioCobrar = p.getPrecioTecnico();
                     desc += " (Precio Gremio)";
                 }
-                agregarAlCarrito(p.getIdProducto(), desc, 1, precioCobrar, p.getStock());
+                
+                // --- INTERCEPTOR DE GARANTÍA E IMEI ---
+                int diasGarantia = daoProd.obtenerDiasGarantia(p.getIdProducto());
+                String imei = "";
+                
+                if (diasGarantia > 0) {
+                    imei = JOptionPane.showInputDialog(this, 
+                        "El equipo '" + p.getNombreProducto() + "' tiene " + diasGarantia + " días de garantía.\n\nPor favor, escanee o ingrese el IMEI / Número de Serie:", 
+                        "Captura de Garantía Obligatoria", 
+                        JOptionPane.WARNING_MESSAGE);
+                        
+                    // Si le da cancelar o lo deja vacío, cancelamos la inserción al carrito
+                    if (imei == null || imei.trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(this, "Venta cancelada. El IMEI es obligatorio para generar la garantía.", "Operación Cancelada", JOptionPane.ERROR_MESSAGE);
+                        txtCodigoBarras.setText(""); txtCodigoBarras.requestFocus();
+                        return; 
+                    }
+                    // Le pegamos el IMEI a la descripción para que salga en el recibo normal
+                    desc += " | IMEI: " + imei; 
+                }
+                // ----------------------------------------
+                
+                agregarAlCarrito(p.getIdProducto(), desc, 1, precioCobrar, p.getStock(), imei, diasGarantia);
             }
         } 
         else {
@@ -504,7 +549,7 @@ public class PanelPuntoVenta extends JPanel {
                     double precio = chkPrecioTecnico.isSelected() ? (double) pantalla[5] : (double) pantalla[4];
                     String desc = "PANTALLA KNIJICO: " + pantalla[2];
                     
-                    agregarAlCarrito(70000 + idReal, desc, 1, precio, stock);
+                    agregarAlCarrito(70000 + idReal, desc, 1, precio, stock, "", 0); // Knijico sin IMEI
                 }
             } else {
                 JOptionPane.showMessageDialog(this, "Código no registrado en sistema.", "No encontrado", JOptionPane.WARNING_MESSAGE);
@@ -514,14 +559,13 @@ public class PanelPuntoVenta extends JPanel {
         txtCodigoBarras.requestFocus();
     }
 
-    private void agregarAlCarrito(int idProd, String desc, int cant, double precioU, int maxStock) {
+    // --- EL MÉTODO "COMPLETO" (El que recibe el IMEI y los Días) ---
+    private void agregarAlCarrito(int idProd, String desc, int cant, double precioU, int maxStock, String imei, int diasGarantia) {
         if (maxStock != -1 && idProd != 0) { 
             int cantidadYaEnCarrito = 0;
             for (int i = 0; i < modeloCarrito.getRowCount(); i++) {
                 int idExistente = Integer.parseInt(modeloCarrito.getValueAt(i, 0).toString());
-                if (idExistente == idProd) {
-                    cantidadYaEnCarrito += Integer.parseInt(modeloCarrito.getValueAt(i, 2).toString());
-                }
+                if (idExistente == idProd) cantidadYaEnCarrito += Integer.parseInt(modeloCarrito.getValueAt(i, 2).toString());
             }
             if ((cantidadYaEnCarrito + cant) > maxStock) {
                 JOptionPane.showMessageDialog(this, "Stock insuficiente.", "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -534,17 +578,23 @@ public class PanelPuntoVenta extends JPanel {
             String descExistente = modeloCarrito.getValueAt(i, 1).toString();
             double precioExistente = Double.parseDouble(modeloCarrito.getValueAt(i, 3).toString());
             
-            if (idExistente == idProd && idProd != 0 && descExistente.equals(desc) && precioExistente == precioU && !desc.startsWith("Orden #")) { 
+            // Si el producto lleva IMEI, NO lo agrupamos, cada teléfono ocupa su propia línea
+            if (idExistente == idProd && idProd != 0 && descExistente.equals(desc) && precioExistente == precioU && !desc.startsWith("Orden #") && imei.isEmpty()) { 
                 int cantActual = Integer.parseInt(modeloCarrito.getValueAt(i, 2).toString());
-                int nuevaCant = cantActual + cant;
-                modeloCarrito.setValueAt(nuevaCant, i, 2);
-                modeloCarrito.setValueAt(nuevaCant * precioU, i, 4);
+                modeloCarrito.setValueAt(cantActual + cant, i, 2);
+                modeloCarrito.setValueAt((cantActual + cant) * precioU, i, 4);
                 recalcularTotal();
                 return;
             }
         }
-        modeloCarrito.addRow(new Object[]{idProd, desc, cant, precioU, cant * precioU, maxStock});
+        
+        modeloCarrito.addRow(new Object[]{idProd, desc, cant, precioU, cant * precioU, maxStock, imei, diasGarantia});
         recalcularTotal();
+    }
+
+    // --- EL MÉTODO "RESUMIDO" (Para que los otros botones no den error) ---
+    private void agregarAlCarrito(int idProd, String desc, int cant, double precioU, int maxStock) {
+        agregarAlCarrito(idProd, desc, cant, precioU, maxStock, "", 0);
     }
 
     private void modificarCantidadCarrito() {
@@ -587,7 +637,7 @@ public class PanelPuntoVenta extends JPanel {
         if (fila >= 0) {
             if (modeloCarrito.getValueAt(fila, 1).toString().startsWith("Orden #")) {
                 idOrdenVinculada = -1; 
-                firmaTemporal = null; // --- BORRAMOS FIRMA AL QUITAR ORDEN ---
+                firmaTemporal = null; 
                 
                 txtBuscarOrden.setEnabled(true); 
                 btnVincularOrden.setEnabled(true);
@@ -665,18 +715,16 @@ public class PanelPuntoVenta extends JPanel {
             } catch (Exception e) { return; }
         }
 
-        // --- LÓGICA DE FIRMA INTELIGENTE ---
         String[] datosFirma;
         if (firmaTemporal != null) {
-            datosFirma = firmaTemporal; // Usamos la firma que ya puso al editar
+            datosFirma = firmaTemporal; 
         } else {
-            datosFirma = solicitarFirmaUsuario(); // Pedimos firma si no ha editado
+            datosFirma = solicitarFirmaUsuario(); 
             if (datosFirma == null) return; 
         }
         
         int idCajeroFirma = Integer.parseInt(datosFirma[0]);
         String nombreCajeroFirma = datosFirma[1];
-        // -----------------------------------
 
         btnCobrar.setEnabled(false); setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR));
         
@@ -703,6 +751,12 @@ public class PanelPuntoVenta extends JPanel {
             dv.setCantidad(Integer.parseInt(modeloCarrito.getValueAt(i, 2).toString()));
             dv.setPrecioUnitario(Double.parseDouble(modeloCarrito.getValueAt(i, 3).toString()));
             dv.setSubtotal(Double.parseDouble(modeloCarrito.getValueAt(i, 4).toString()));
+            
+            // --- ESTAS SON LAS DOS LÍNEAS DE ORO QUE FALTABAN ---
+            dv.setImei(modeloCarrito.getValueAt(i, 6) != null ? modeloCarrito.getValueAt(i, 6).toString() : "");
+            dv.setDiasGarantia(Integer.parseInt(modeloCarrito.getValueAt(i, 7).toString()));
+            // ----------------------------------------------------
+            
             listaDetalles.add(dv);
         }
 
@@ -755,12 +809,33 @@ public class PanelPuntoVenta extends JPanel {
             } else {
                 utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta(); 
                 impresora.imprimirReciboVenta(idRecibo);
+                // --- NUEVO: ¿HAY GARANTÍAS EN ESTA VENTA? ---
+                for (modelo.DetalleVenta dv : listaDetalles) {
+                    if (dv.getDiasGarantia() > 0) {
+                        // Si el producto tiene garantía, sacamos los datos para la póliza
+                        // Calculamos fecha de vencimiento rápida
+                        java.util.Calendar cal = java.util.Calendar.getInstance();
+                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+                        String fCompra = sdf.format(cal.getTime());
+                        cal.add(java.util.Calendar.DAY_OF_YEAR, dv.getDiasGarantia());
+                        String fVence = sdf.format(cal.getTime());
+                        
+                        String nomCliente = txtClienteAsignado.getText();
+                        
+                        // Obtenemos la categoría desde la descripción (o podrías hacer un query rápido)
+                        // Para este caso usaremos "EQUIPO" como genérico si no lo tenemos a mano
+                        
+                        impresora.imprimirPolizaGarantia(
+                            String.valueOf(idRecibo), fCompra, fVence, nomCliente, "VER REGISTRO", 
+                            dv.getDescripcion(), dv.getImei(), dv.getDiasGarantia(), "ARTICULO"
+                        );
+                    }
+                }
             }
             
-            // --- RESETEO GENERAL AL FINALIZAR VENTA ---
             modeloCarrito.setRowCount(0); recalcularTotal();
             idOrdenVinculada = -1; 
-            firmaTemporal = null; // --- BORRAMOS FIRMA AL FINALIZAR COBRO ---
+            firmaTemporal = null; 
             txtBuscarOrden.setEnabled(true); btnVincularOrden.setEnabled(true);
             tablaPendientes.setEnabled(true); tablaPendientes.setBackground(Color.WHITE); tablaPendientes.setForeground(Color.BLACK);
             idClienteSeleccionado = 0; txtClienteAsignado.setText("Consumidor Final");
@@ -972,9 +1047,7 @@ public class PanelPuntoVenta extends JPanel {
                 modeloCarrito.setValueAt(nuevoPrecio, filaCarrito, 4);
                 recalcularTotal();
                 
-                // --- GUARDAMOS LA FIRMA EN MEMORIA TRAS UNA EDICIÓN EXITOSA ---
                 firmaTemporal = datosFirma; 
-                // --------------------------------------------------------------
                 
                 JOptionPane.showMessageDialog(dialogo, "Orden actualizada por " + datosFirma[1] + ".", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                 dialogo.dispose(); 
@@ -994,8 +1067,6 @@ public class PanelPuntoVenta extends JPanel {
         dialogo.add(panelFondo);
         dialogo.setVisible(true);
     }
-
-
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {

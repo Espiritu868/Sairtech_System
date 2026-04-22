@@ -20,6 +20,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 
 public class PanelInventario extends javax.swing.JPanel {
@@ -44,8 +45,9 @@ public class PanelInventario extends javax.swing.JPanel {
     private JButton btnActualizar;
     private JButton btnLimpiar;
     private JButton btnImprimirEtiqueta;
-    private JButton btnEliminar; // <--- NUEVO
-    private JCheckBox chkVerEliminados; // <--- NUEVO
+    private JButton btnNuevaCategoria; // <--- NUEVO BOTÓN
+    private JButton btnEliminar; 
+    private JCheckBox chkVerEliminados; 
 
     private int idProductoSeleccionado = -1;
     private List<Integer> listaIdCategorias = new ArrayList<>();
@@ -135,17 +137,25 @@ public class PanelInventario extends javax.swing.JPanel {
         btnGuardar = new JButton("Guardar Producto"); estilizarBoton(btnGuardar, new Color(46, 204, 113)); btnGuardar.addActionListener(e -> guardarProducto());
         btnActualizar = new JButton("Actualizar"); estilizarBoton(btnActualizar, new Color(52, 152, 219)); btnActualizar.setEnabled(false); btnActualizar.addActionListener(e -> actualizarProducto());
         btnLimpiar = new JButton("Limpiar"); estilizarBoton(btnLimpiar, new Color(149, 165, 166)); btnLimpiar.addActionListener(e -> limpiarFormulario());
-        btnImprimirEtiqueta = new JButton("Imprimir Etiquetas"); estilizarBoton(btnImprimirEtiqueta, new Color(155, 89, 182)); btnImprimirEtiqueta.setEnabled(false); btnImprimirEtiqueta.addActionListener(e -> imprimirEtiquetas());
         
-        // --- BOTÓN ELIMINAR ---
         btnEliminar = new JButton("Eliminar"); estilizarBoton(btnEliminar, new Color(231, 76, 60)); 
         btnEliminar.setEnabled(false); btnEliminar.addActionListener(e -> alternarEstadoProducto());
 
+        btnImprimirEtiqueta = new JButton("Imprimir Etiquetas"); estilizarBoton(btnImprimirEtiqueta, new Color(155, 89, 182)); 
+        btnImprimirEtiqueta.setEnabled(false); btnImprimirEtiqueta.addActionListener(e -> imprimirEtiquetas());
+
+        // --- NUEVO BOTÓN DE CATEGORÍA ---
+        btnNuevaCategoria = new JButton("+ Nueva Categoría"); estilizarBoton(btnNuevaCategoria, new Color(243, 156, 18));
+        btnNuevaCategoria.addActionListener(e -> abrirModalCrearCategoria());
+
         gbc.gridy++; gbc.insets = new Insets(15, 0, 5, 0); panel.add(btnGuardar, gbc);
+        
         JPanel panelAcciones = new JPanel(new java.awt.GridLayout(1, 3, 5, 0)); panelAcciones.setOpaque(false); 
         panelAcciones.add(btnActualizar); panelAcciones.add(btnLimpiar); panelAcciones.add(btnEliminar);
+        
         gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(panelAcciones, gbc);
-        gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0); panel.add(btnImprimirEtiqueta, gbc);
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(btnImprimirEtiqueta, gbc);
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0); panel.add(btnNuevaCategoria, gbc); // Se agrega al panel
         gbc.gridy++; gbc.weighty = 1.0; panel.add(Box.createVerticalGlue(), gbc);
 
         return panel;
@@ -158,7 +168,6 @@ public class PanelInventario extends javax.swing.JPanel {
         txtBuscar = new JTextField(); txtBuscar.setFont(new Font("Segoe UI", Font.PLAIN, 16)); txtBuscar.setPreferredSize(new Dimension(0, 40));
         txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() { public void keyReleased(java.awt.event.KeyEvent evt) { cargarTabla(txtBuscar.getText().trim()); } });
         
-        // --- CHECKBOX PAPELERA ---
         chkVerEliminados = new JCheckBox("Ver Papelera");
         chkVerEliminados.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         chkVerEliminados.setOpaque(false);
@@ -187,6 +196,114 @@ public class PanelInventario extends javax.swing.JPanel {
         btn.setPreferredSize(new Dimension(0, 40)); btn.setFocusPainted(false); btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     }
 
+    // --- NUEVO: MODAL DE CREACIÓN DE CATEGORÍAS ---
+    private void abrirModalCrearCategoria() {
+        javax.swing.JDialog dialogo = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Nueva Categoría", true);
+        dialogo.setSize(400, 360);
+        dialogo.setLocationRelativeTo(this);
+        dialogo.setResizable(false);
+
+        JPanel panelFondo = new JPanel(new java.awt.GridBagLayout());
+        panelFondo.setBackground(Color.WHITE);
+        panelFondo.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gbc.insets = new java.awt.Insets(5, 0, 5, 0);
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+
+        JLabel lblTitulo = new JLabel("Registrar Categoría");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitulo.setForeground(new Color(44, 62, 80));
+        gbc.gridy = 0; gbc.insets = new java.awt.Insets(0, 0, 15, 0);
+        panelFondo.add(lblTitulo, gbc);
+
+        JTextField txtNombreCat = new JTextField();
+        txtNombreCat.setPreferredSize(new Dimension(0, 35));
+        txtNombreCat.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+        JCheckBox chkGarantia = new JCheckBox("Esta categoría aplica garantía");
+        chkGarantia.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        chkGarantia.setForeground(new Color(41, 128, 185));
+        chkGarantia.setBackground(Color.WHITE);
+        chkGarantia.setFocusPainted(false);
+
+        JComboBox<String> cmbDias = new JComboBox<>(new String[]{
+            "7", "15", "30", "60", "90", "180", "365"
+        });
+        cmbDias.setPreferredSize(new Dimension(0, 35));
+        cmbDias.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        cmbDias.setEnabled(false); // Apagado por defecto
+
+        // Lógica de encendido/apagado
+        chkGarantia.addActionListener(e -> cmbDias.setEnabled(chkGarantia.isSelected()));
+
+        gbc.insets = new java.awt.Insets(5, 0, 2, 0);
+        gbc.gridy++; panelFondo.add(new JLabel("Nombre de la Categoría: *"), gbc);
+        gbc.gridy++; panelFondo.add(txtNombreCat, gbc);
+        
+        gbc.gridy++; gbc.insets = new java.awt.Insets(15, 0, 5, 0);
+        panelFondo.add(chkGarantia, gbc);
+        
+        gbc.gridy++; gbc.insets = new java.awt.Insets(5, 0, 2, 0);
+        panelFondo.add(new JLabel("Seleccione los días de cobertura:"), gbc);
+        gbc.gridy++; panelFondo.add(cmbDias, gbc);
+
+        JPanel panelBotones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
+        panelBotones.setOpaque(false);
+
+        JButton btnCancelar = new JButton("Cancelar");
+        btnCancelar.setBackground(new Color(149, 165, 166)); btnCancelar.setForeground(Color.WHITE);
+        btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnCancelar.setFocusPainted(false);
+        btnCancelar.addActionListener(e -> dialogo.dispose());
+
+        JButton btnGuardarCat = new JButton("Guardar");
+        btnGuardarCat.setBackground(new Color(46, 204, 113)); btnGuardarCat.setForeground(Color.WHITE);
+        btnGuardarCat.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnGuardarCat.setFocusPainted(false);
+
+        btnGuardarCat.addActionListener(e -> {
+            String nombre = txtNombreCat.getText().trim();
+            if (nombre.isEmpty()) {
+                JOptionPane.showMessageDialog(dialogo, "El nombre de la categoría es obligatorio.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            int dias = 0;
+            if (chkGarantia.isSelected()) {
+                dias = Integer.parseInt(cmbDias.getSelectedItem().toString());
+            }
+
+            // --- MAGIA CONECTADA AL DAO ---
+            modelo.CategoriaProducto nuevaCat = new modelo.CategoriaProducto();
+            nuevaCat.setNombreCategoria(nombre);
+            nuevaCat.setDescripcion(""); // No ocupamos descripción por ahora, se envía vacío
+            nuevaCat.setDiasGarantia(dias);
+
+            dao.CategoriaProductoDAO daoCat = new dao.CategoriaProductoDAO();
+            
+            // Aquí intentamos insertar en la BD
+            if (daoCat.insertar(nuevaCat)) {
+                JOptionPane.showMessageDialog(dialogo, "Categoría guardada exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                cargarCategorias(); // Recarga el ComboBox principal al instante
+                cmbCategoria.setSelectedItem(nombre); // Selecciona la que acabas de crear
+                dialogo.dispose(); // Cierra el modal
+            } else {
+                JOptionPane.showMessageDialog(dialogo, "Error al guardar la categoría en la Base de Datos. Revisa la consola de NetBeans.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        panelBotones.add(btnCancelar);
+        panelBotones.add(btnGuardarCat);
+        panelBotones.setPreferredSize(new Dimension(0, 45));
+
+        gbc.gridy++; gbc.insets = new java.awt.Insets(25, 0, 0, 0);
+        panelFondo.add(panelBotones, gbc);
+
+        dialogo.add(panelFondo);
+        dialogo.setVisible(true);
+    }
+
     private void cargarCategorias() {
         cmbCategoria.removeAllItems(); listaIdCategorias.clear(); cmbCategoria.addItem("--- Seleccione ---"); listaIdCategorias.add(-1);
         for (modelo.CategoriaProducto c : new dao.CategoriaProductoDAO().listar()) { cmbCategoria.addItem(c.getNombreCategoria()); listaIdCategorias.add(c.getIdCategoria()); }
@@ -199,7 +316,6 @@ public class PanelInventario extends javax.swing.JPanel {
     }
 
     private void cargarTabla(String filtro) {
-        // --- MODIFICADO: Lee el checkbox ---
         boolean verPapelera = chkVerEliminados.isSelected();
         List<Object[]> lista = new dao.ProductoDAO().buscarProductoCompleto(filtro, verPapelera);
         
@@ -291,7 +407,6 @@ public class PanelInventario extends javax.swing.JPanel {
         }
     }
     
-    // --- LÓGICA DE OCULTAR / RESTAURAR ---
     private void alternarEstadoProducto() {
         if (idProductoSeleccionado == -1) return;
         boolean esPapelera = chkVerEliminados.isSelected();
@@ -394,6 +509,7 @@ public class PanelInventario extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(this, "Ingrese un número entero válido mayor a cero.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+                
 
 
     @SuppressWarnings("unchecked")

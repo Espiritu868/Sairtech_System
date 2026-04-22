@@ -17,8 +17,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import javax.print.Doc;
+import javax.print.DocFlavor;
+import javax.print.DocPrintJob;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
+import javax.print.SimpleDoc;
+import javax.print.attribute.AttributeSet;
+import javax.print.attribute.HashAttributeSet;
+import javax.print.attribute.standard.PrinterName;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -405,5 +412,93 @@ public class ImpresoraDirecta implements Printable {
             }
         }, pf);
         try { pj.print(); return true; } catch (PrinterException e) { return false; }
+    }
+    
+    // --- MÉTODO PARA IMPRIMIR PÓLIZA DE GARANTÍA (CON VENTANA NATIVA DE WINDOWS) ---
+    public void imprimirPolizaGarantia(String ticket, String fecha, String vence, String cliente, String tel, String equipo, String imei, int dias, String cat) {
+        try {
+            // 1. Obtener todas las impresoras instaladas y la impresora por defecto
+            javax.print.PrintService[] printServices = javax.print.PrintServiceLookup.lookupPrintServices(null, null);
+            javax.print.PrintService defaultService = javax.print.PrintServiceLookup.lookupDefaultPrintService();
+            
+            if (printServices.length == 0) {
+                javax.swing.JOptionPane.showMessageDialog(null, "No se encontraron impresoras instaladas en el sistema.", "Error de Impresora", javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // 2. Crear los atributos de impresión vacíos (obligatorio para la ventana nativa)
+            javax.print.attribute.PrintRequestAttributeSet attributes = new javax.print.attribute.HashPrintRequestAttributeSet();
+
+            // 3. INVOCAR LA VENTANA NATIVA DE IMPRESIÓN (La de tu foto)
+            javax.print.PrintService selectedService = javax.print.ServiceUI.printDialog(
+                    null, // Frame padre
+                    200, 200, // Coordenadas donde aparecerá la ventana en pantalla
+                    printServices, // Lista de impresoras
+                    defaultService, // Impresora seleccionada por defecto
+                    null, // Flavor (nulo para que muestre todas)
+                    attributes // Atributos
+            );
+
+            // Si el usuario presiona "Cancel" o cierra la ventana, la variable llega nula y abortamos.
+            if (selectedService == null) {
+                return;
+            }
+
+            // 4. Preparar el trabajo de impresión con la impresora que eligió en la ventana
+            javax.print.DocPrintJob job = selectedService.createPrintJob();
+            
+            // Formateo de texto (32 caracteres max para 58mm)
+            StringBuilder sb = new StringBuilder();
+            sb.append((char)27 + "a" + (char)1); // Centrado
+            sb.append((char)27 + "!" + (char)32); // Doble altura y negrita
+            sb.append("SAIRTECH\n");
+            sb.append((char)27 + "!" + (char)1); // Texto normal
+            sb.append("TECNOLOGIA Y REPARACION\n");
+            sb.append("Tel: 9988-3561\n");
+            sb.append("Trinidad, Santa Barbara\n");
+            sb.append("================================\n");
+            sb.append((char)27 + "!" + (char)8); // Negrita
+            sb.append("POLIZA DE GARANTIA\n");
+            sb.append((char)27 + "!" + (char)1); // Normal
+            sb.append("================================\n\n");
+            
+            sb.append((char)27 + "a" + (char)0); // Alineado a la izquierda
+            sb.append("Recibo: #").append(ticket).append("\n");
+            sb.append("F. Compra: ").append(fecha).append("\n");
+            sb.append("F. Vence:  ").append(vence).append("\n");
+            sb.append("--------------------------------\n");
+            sb.append("Cliente: ").append(cliente.length() > 22 ? cliente.substring(0, 22) : cliente).append("\n");
+            sb.append("Tel: ").append(tel).append("\n");
+            sb.append("IMEI: ").append(imei).append("\n");
+            sb.append("================================\n\n");
+            
+            sb.append("EQUIPO / PRODUCTO:\n");
+            sb.append(equipo.length() > 32 ? equipo.substring(0, 29) + "..." : equipo).append("\n");
+            sb.append("--------------------------------\n\n");
+            
+            sb.append("CONDICIONES:\n");
+            sb.append("1. Todo ").append(cat).append(" de SAIRTECH\n");
+            sb.append("tiene garantia de ").append(dias).append(" dias.\n");
+            sb.append("2. Cambio solo por defecto de\n");
+            sb.append("fabrica y mismo modelo.\n");
+            sb.append("3. Accesorios: 7 dias max.\n");
+            sb.append("4. Garantia NULA por golpes o\n");
+            sb.append("humedad (mojado).\n\n");
+            
+            sb.append((char)27 + "a" + (char)1); // Centrado
+            sb.append("\n      __________________\n");
+            sb.append("        Firma Cliente\n\n\n\n\n");
+            
+            sb.append((char)29 + "V" + (char)66 + (char)0); // Corte de papel
+
+            // Mandar a imprimir usando el encoding clásico para POS
+            byte[] bytes = sb.toString().getBytes("CP437");
+            javax.print.Doc doc = new javax.print.SimpleDoc(bytes, javax.print.DocFlavor.BYTE_ARRAY.AUTOSENSE, null);
+            job.print(doc, null);
+
+        } catch (Exception e) {
+            System.err.println("Error impresora: " + e.getMessage());
+            javax.swing.JOptionPane.showMessageDialog(null, "Hubo un error de comunicación con la impresora:\n" + e.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }
 }
