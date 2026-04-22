@@ -40,7 +40,7 @@ public class ProductoDAO {
         } catch (SQLException e) { return false; }
     }
     
-    public int insertarConId(Producto producto) {
+    public int insertarConId(modelo.Producto producto) {
         String sql = "INSERT INTO productos (codigo_barras, nombre_producto, id_categoria, precio_compra, precio_venta, stock, stock_minimo, id_proveedor, aplica_precio_tecnico, precio_tecnico, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
@@ -65,7 +65,18 @@ public class ProductoDAO {
                     if (rs.next()) return rs.getInt(1);
                 }
             }
-        } catch (SQLException e) {}
+        } catch (java.sql.SQLIntegrityConstraintViolationException e) {
+            // ¡ESTE ES EL ESCUDO! Si alguien intenta meter un código que ya existe
+            System.err.println("¡Intento de código duplicado bloqueado por la BD!");
+            javax.swing.JOptionPane.showMessageDialog(null, 
+                "El Código de Barras que ingresó ya le pertenece a otro producto.\nPor favor, asigne uno distinto o déjelo en blanco para que el sistema lo genere automáticamente.", 
+                "Código Duplicado", 
+                javax.swing.JOptionPane.WARNING_MESSAGE);
+            return -1;
+        } catch (SQLException e) {
+            // Si hay otro tipo de error, lo mostramos en consola para no estar a ciegas
+            System.err.println("Error general al insertar producto: " + e.getMessage());
+        }
         return -1;
     }
 

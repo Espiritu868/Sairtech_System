@@ -21,60 +21,59 @@ public class VentaDAO {
     // =========================================================================
     // REGISTRAR VENTA COMPLETA (Transacción Segura)
     // =========================================================================
+    // =========================================================================
+    // REGISTRAR VENTA COMPLETA (Transacción Segura + KARDEX AUTOMÁTICO)
+    // =========================================================================
     public int registrarVentaCompleta(Venta venta, List<DetalleVenta> listaDetalles) {
         Connection con = null;
         int idVentaGenerado = -1;
 
         try {
             con = factory.getConexion();
-            // 1. APAGAMOS EL AUTO-GUARDADO (Iniciamos la Transacción)
             con.setAutoCommit(false); 
 
-            // 2. GUARDAR LA CABECERA (La tabla ventas)
+            // 1. GUARDAR LA CABECERA (La tabla ventas)
             String sqlVenta = "INSERT INTO ventas (id_cliente, id_usuario, id_orden, total, metodo_pago) VALUES (?, ?, ?, ?, ?)";
-            try (PreparedStatement psVenta = con.prepareStatement(sqlVenta, Statement.RETURN_GENERATED_KEYS)) {
-                
+            try (PreparedStatement psVenta = con.prepareStatement(sqlVenta, java.sql.Statement.RETURN_GENERATED_KEYS)) {
                 if (venta.getIdCliente() > 0) psVenta.setInt(1, venta.getIdCliente());
-                else psVenta.setNull(1, java.sql.Types.INTEGER); // Consumidor Final
+                else psVenta.setNull(1, java.sql.Types.INTEGER); 
                 
                 psVenta.setInt(2, venta.getIdUsuario());
-                
                 if (venta.getIdOrden() > 0) psVenta.setInt(3, venta.getIdOrden());
-                else psVenta.setNull(3, java.sql.Types.INTEGER); // Venta de mostrador directa
+                else psVenta.setNull(3, java.sql.Types.INTEGER); 
                 
                 psVenta.setDouble(4, venta.getTotal());
                 psVenta.setString(5, venta.getMetodoPago());
-                
                 psVenta.executeUpdate();
                 
-                // Rescatar el ID del nuevo recibo
                 try (ResultSet rs = psVenta.getGeneratedKeys()) {
                     if (rs.next()) idVentaGenerado = rs.getInt(1);
                     else throw new SQLException("No se pudo obtener el ID de la venta.");
                 }
             }
 
-            // 3. GUARDAR LOS DETALLES Y RESTAR INVENTARIO
+            // 2. GUARDAR DETALLES, RESTAR INVENTARIO Y REGISTRAR EN KARDEX
             String sqlDetalle = "INSERT INTO detalles_venta (id_venta, id_producto, descripcion, cantidad, precio_unitario, subtotal, imei, dias_garantia) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            
-            // --- PREPARAMOS LAS DOS RUTAS DE INVENTARIO ---
             String sqlRestarStockNormal = "UPDATE productos SET stock = stock - ? WHERE id_producto = ?";
             String sqlRestarStockKnijico = "UPDATE pantallas_knijico SET stock = stock - ? WHERE id_pantalla = ?";
             
+            // --- NUEVAS CONSULTAS PARA EL KARDEX ---
+            String sqlConsultarStock = "SELECT stock FROM productos WHERE id_producto = ?";
+            String sqlKardex = "INSERT INTO kardex (id_producto, id_usuario, fecha_movimiento, tipo_movimiento, cantidad, stock_restante_despues, referencia) VALUES (?, ?, NOW(), 'SALIDA_VENTA', ?, ?, ?)";
+            
             try (PreparedStatement psDetalle = con.prepareStatement(sqlDetalle);
                  PreparedStatement psStockNormal = con.prepareStatement(sqlRestarStockNormal);
-                 PreparedStatement psStockKnijico = con.prepareStatement(sqlRestarStockKnijico)) {
+                 PreparedStatement psStockKnijico = con.prepareStatement(sqlRestarStockKnijico);
+                 PreparedStatement psConsultarStock = con.prepareStatement(sqlConsultarStock);
+                 PreparedStatement psKardex = con.prepareStatement(sqlKardex)) {
                 
                 for (DetalleVenta detalle : listaDetalles) {
-                    // Guardar Renglón
                     psDetalle.setInt(1, idVentaGenerado);
-                    
                     int idProductoVenta = detalle.getIdProducto();
                     
                     if (idProductoVenta > 0) {
-                        psDetalle.setInt(2, idProductoVenta); // Guardamos el ID tal cual
+                        psDetalle.setInt(2, idProductoVenta); 
                         
-                        // --- LA MAGIA MATEMÁTICA PARA SEPARAR EL STOCK ---
                         if (idProductoVenta >= 70000) {
                             // ES PANTALLA KNIJICO
                             int idRealKnijico = idProductoVenta - 70000;
@@ -86,25 +85,36 @@ public class VentaDAO {
                             psStockNormal.setInt(1, detalle.getCantidad());
                             psStockNormal.setInt(2, idProductoVenta);
                             psStockNormal.executeUpdate();
+                            
+                            // --- MAGIA DEL KARDEX: Consultar cómo quedó el stock tras la venta ---
+                            int stockResultante = 0;
+                            psConsultarStock.setInt(1, idProductoVenta);
+                            try (ResultSet rsStock = psConsultarStock.executeQuery()) {
+                                if(rsStock.next()) stockResultante = rsStock.getInt("stock");
+                            }
+                            
+                            // --- MAGIA DEL KARDEX: Guardar el historial ---
+                            psKardex.setInt(1, idProductoVenta);
+                            psKardex.setInt(2, venta.getIdUsuario());
+                            psKardex.setInt(3, -detalle.getCantidad()); // Negativo porque es una SALIDA
+                            psKardex.setInt(4, stockResultante);
+                            psKardex.setString(5, "Recibo #" + String.format("%08d", idVentaGenerado));
+                            psKardex.executeUpdate();
                         }
                     } else {
-                        psDetalle.setNull(2, java.sql.Types.INTEGER); // Es un servicio (ID 0)
+                        psDetalle.setNull(2, java.sql.Types.INTEGER); 
                     }
                     
                     psDetalle.setString(3, detalle.getDescripcion());
                     psDetalle.setInt(4, detalle.getCantidad());
                     psDetalle.setDouble(5, detalle.getPrecioUnitario());
                     psDetalle.setDouble(6, detalle.getSubtotal());
-                    
-                    // Guardamos IMEI y Días de Garantía (Si están vacíos, se guardan en blanco/cero)
                     psDetalle.setString(7, detalle.getImei() != null ? detalle.getImei() : "");
                     psDetalle.setInt(8, detalle.getDiasGarantia());
-                    
                     psDetalle.executeUpdate();
                 }
             }
 
-            // 4. SI HAY UNA ORDEN ASOCIADA, LA MARCAMOS COMO ENTREGADA
             if (venta.getIdOrden() > 0) {
                 String sqlOrden = "UPDATE ordenes_reparacion SET estado = 'Entregado', id_usuario_entrega = ? WHERE id_orden = ?";
                 try (PreparedStatement psOrden = con.prepareStatement(sqlOrden)) {
@@ -114,28 +124,15 @@ public class VentaDAO {
                 }
             }
 
-            // 5. SI TODO SALIÓ BIEN, GUARDAMOS DEFINITIVAMENTE (Commit)
             con.commit();
             return idVentaGenerado;
 
         } catch (SQLException e) {
-            // SI ALGO FALLÓ, ECHAMOS TODO PARA ATRÁS (Rollback)
             System.err.println("Error en la transacción de venta. Haciendo Rollback: " + e.getMessage());
-            try {
-                if (con != null) con.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Error fatal al hacer rollback: " + ex.getMessage());
-            }
+            try { if (con != null) con.rollback(); } catch (SQLException ex) {}
             return -1;
         } finally {
-            try {
-                if (con != null) {
-                    con.setAutoCommit(true); // Restauramos el comportamiento normal
-                    con.close();
-                }
-            } catch (SQLException e) {
-                System.err.println("Error al cerrar conexión: " + e.getMessage());
-            }
+            try { if (con != null) { con.setAutoCommit(true); con.close(); } } catch (SQLException e) {}
         }
     }
     

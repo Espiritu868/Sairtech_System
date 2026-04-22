@@ -700,150 +700,140 @@ public class PanelPuntoVenta extends JPanel {
     }
 
     private void procesarCobroFinal() {
-        if (modeloCarrito.getRowCount() == 0) return;
-        
+    if (modeloCarrito.getRowCount() == 0) return;
+
+    // --- NUEVA LÓGICA: COBRO EXPRESS ---
+    if (totalVenta > 0) {
+        // Ya no pedimos "Efectivo Recibido" ni calculamos cambio.
+        // Si el método es efectivo, simplemente procedemos.
         if (cmbMetodoPago.getSelectedItem().toString().equals("Efectivo")) {
-            String pagoStr = JOptionPane.showInputDialog(this, "Total: L. " + totalVenta + "\n¿Efectivo Recibido?");
-            if (pagoStr == null) return; 
-            try {
-                double pago = Double.parseDouble(pagoStr);
-                if (pago < totalVenta) {
-                    JOptionPane.showMessageDialog(this, "Pago insuficiente.");
-                    return;
-                }
-                JOptionPane.showMessageDialog(this, "Cambio: L. " + String.format("%.2f", (pago - totalVenta)));
-            } catch (Exception e) { return; }
+            System.out.println("Procesando pago en efectivo por: L. " + totalVenta);
         }
-
-        String[] datosFirma;
-        if (firmaTemporal != null) {
-            datosFirma = firmaTemporal; 
-        } else {
-            datosFirma = solicitarFirmaUsuario(); 
-            if (datosFirma == null) return; 
-        }
-        
-        int idCajeroFirma = Integer.parseInt(datosFirma[0]);
-        String nombreCajeroFirma = datosFirma[1];
-
-        btnCobrar.setEnabled(false); setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR));
-        
-        modelo.Venta venta = new modelo.Venta();
-        venta.setIdCliente(idClienteSeleccionado); 
-        
-        venta.setIdUsuario(idCajeroFirma); 
-        
-        venta.setIdOrden(idOrdenVinculada); venta.setTotal(totalVenta); 
-        venta.setMetodoPago(cmbMetodoPago.getSelectedItem().toString());
-
-        List<modelo.DetalleVenta> listaDetalles = new ArrayList<>();
-        for (int i = 0; i < modeloCarrito.getRowCount(); i++) {
-            modelo.DetalleVenta dv = new modelo.DetalleVenta();
-            int idCarrito = Integer.parseInt(modeloCarrito.getValueAt(i, 0).toString());
-            
-            if (idCarrito >= 70000) {
-                dv.setIdProducto(idCarrito - 70000); 
-            } else {
-                dv.setIdProducto(idCarrito); 
-            }
-            
-            dv.setDescripcion(modeloCarrito.getValueAt(i, 1).toString());
-            dv.setCantidad(Integer.parseInt(modeloCarrito.getValueAt(i, 2).toString()));
-            dv.setPrecioUnitario(Double.parseDouble(modeloCarrito.getValueAt(i, 3).toString()));
-            dv.setSubtotal(Double.parseDouble(modeloCarrito.getValueAt(i, 4).toString()));
-            
-            // --- ESTAS SON LAS DOS LÍNEAS DE ORO QUE FALTABAN ---
-            dv.setImei(modeloCarrito.getValueAt(i, 6) != null ? modeloCarrito.getValueAt(i, 6).toString() : "");
-            dv.setDiasGarantia(Integer.parseInt(modeloCarrito.getValueAt(i, 7).toString()));
-            // ----------------------------------------------------
-            
-            listaDetalles.add(dv);
-        }
-
-        dao.VentaDAO daoVenta = new dao.VentaDAO();
-        int idRecibo = daoVenta.registrarVentaCompleta(venta, listaDetalles);
-
-        if (idRecibo != -1) {
-            JOptionPane.showMessageDialog(this, "¡Éxito!\nTransacción #" + idRecibo + "\nCajero/Técnico: " + nombreCajeroFirma.toUpperCase());
-            
-            if (idOrdenVinculada != -1) {
-                try {
-                    dao.OrdenReparacionDAO daoOrden = new dao.OrdenReparacionDAO();
-                    String[] textos = daoOrden.obtenerTextosOrden(idOrdenVinculada);
-                    String fallaOr = (textos[0] != null && !textos[0].isEmpty()) ? textos[0] : "Revisión general";
-                    String trabOr = (textos[1] != null && !textos[1].isEmpty()) ? textos[1] : "Revisión técnica general.";
-                    String claveOr = (textos.length > 2 && textos[2] != null) ? textos[2] : "Sin Clave";
-                    String fechaOr = daoOrden.obtenerFechaOrden(idOrdenVinculada);
-                    
-                    String cliOr = txtClienteAsignado.getText();
-                    String modOr = "";
-                    String tipoOr = "";
-                    
-                    String q = "SELECT e.modelo FROM ordenes_reparacion o JOIN equipos_registrados e ON o.id_equipo = e.id_equipo WHERE o.id_orden = ?";
-                    try (java.sql.Connection con = new factory.ConexionFactory().getConexion();
-                         java.sql.PreparedStatement ps = con.prepareStatement(q)) {
-                        ps.setInt(1, idOrdenVinculada);
-                        try (java.sql.ResultSet rs = ps.executeQuery()) {
-                            if (rs.next()) modOr = rs.getString("modelo");
-                        }
-                    }
-                    
-                    String equipoConClave = modOr + "  |  Clave: " + claveOr;
-                    
-                    String tecnico = nombreCajeroFirma; 
-                    
-                    utilidades.GeneradorPDF generador = new utilidades.GeneradorPDF();
-                    generador.crearTicket(
-                        String.valueOf(idOrdenVinculada), fechaOr, cliOr, equipoConClave, fallaOr, String.valueOf(totalVenta),
-                        "SAIRTECH - TECNOLOGIA", "Santa Barbara, Barrio La Soledad, Frente a Sastreria La Elegancia", "8951-8040",
-                        "OJO no aplica garantia en equipos mojados, pantallas no cuentan con garantía.",
-                        tecnico, trabOr, false, tipoOr, true
-                    );
-                    
-                    daoOrden.actualizarEstadoYCosto(idOrdenVinculada, "Entregado", totalVenta);
-                    daoOrden.marcarComoEntregado(idOrdenVinculada, idCajeroFirma);
-
-                } catch (Exception ex) {
-                    System.err.println("Error al crear PDF de entrega: " + ex.getMessage());
-                }
-            } else {
-                utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta(); 
-                impresora.imprimirReciboVenta(idRecibo);
-                // --- NUEVO: ¿HAY GARANTÍAS EN ESTA VENTA? ---
-                for (modelo.DetalleVenta dv : listaDetalles) {
-                    if (dv.getDiasGarantia() > 0) {
-                        // Si el producto tiene garantía, sacamos los datos para la póliza
-                        // Calculamos fecha de vencimiento rápida
-                        java.util.Calendar cal = java.util.Calendar.getInstance();
-                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
-                        String fCompra = sdf.format(cal.getTime());
-                        cal.add(java.util.Calendar.DAY_OF_YEAR, dv.getDiasGarantia());
-                        String fVence = sdf.format(cal.getTime());
-                        
-                        String nomCliente = txtClienteAsignado.getText();
-                        
-                        // Obtenemos la categoría desde la descripción (o podrías hacer un query rápido)
-                        // Para este caso usaremos "EQUIPO" como genérico si no lo tenemos a mano
-                        
-                        impresora.imprimirPolizaGarantia(
-                            String.valueOf(idRecibo), fCompra, fVence, nomCliente, "VER REGISTRO", 
-                            dv.getDescripcion(), dv.getImei(), dv.getDiasGarantia(), "ARTICULO"
-                        );
-                    }
-                }
-            }
-            
-            modeloCarrito.setRowCount(0); recalcularTotal();
-            idOrdenVinculada = -1; 
-            firmaTemporal = null; 
-            txtBuscarOrden.setEnabled(true); btnVincularOrden.setEnabled(true);
-            tablaPendientes.setEnabled(true); tablaPendientes.setBackground(Color.WHITE); tablaPendientes.setForeground(Color.BLACK);
-            idClienteSeleccionado = 0; txtClienteAsignado.setText("Consumidor Final");
-            cargarOrdenesPendientesVisuales(); 
-            if(modoActual.equals("MOSTRADOR")) txtCodigoBarras.requestFocus(); else txtBuscarOrden.requestFocus();
-        }
-        btnCobrar.setEnabled(true); setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+    } else {
+        // Es un total de 0 (Garantía o cortesía), saltamos directo
+        System.out.println("Venta de cortesía (L. 0.00). Saltando validación de efectivo.");
     }
+
+    // --- LÓGICA DE FIRMA ---
+    String[] datosFirma;
+    if (firmaTemporal != null) {
+        datosFirma = firmaTemporal; 
+    } else {
+        datosFirma = solicitarFirmaUsuario(); 
+        if (datosFirma == null) return; 
+    }
+    
+    int idCajeroFirma = Integer.parseInt(datosFirma[0]);
+    String nombreCajeroFirma = datosFirma[1];
+
+    btnCobrar.setEnabled(false); setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR));
+    
+    modelo.Venta venta = new modelo.Venta();
+    venta.setIdCliente(idClienteSeleccionado); 
+    venta.setIdUsuario(idCajeroFirma); 
+    venta.setIdOrden(idOrdenVinculada); 
+    venta.setTotal(totalVenta); 
+    venta.setMetodoPago(cmbMetodoPago.getSelectedItem().toString());
+
+    List<modelo.DetalleVenta> listaDetalles = new ArrayList<>();
+    for (int i = 0; i < modeloCarrito.getRowCount(); i++) {
+        modelo.DetalleVenta dv = new modelo.DetalleVenta();
+        int idCarrito = Integer.parseInt(modeloCarrito.getValueAt(i, 0).toString());
+        
+        if (idCarrito >= 70000) {
+            dv.setIdProducto(idCarrito - 70000); 
+        } else {
+            dv.setIdProducto(idCarrito); 
+        }
+        
+        dv.setDescripcion(modeloCarrito.getValueAt(i, 1).toString());
+        dv.setCantidad(Integer.parseInt(modeloCarrito.getValueAt(i, 2).toString()));
+        dv.setPrecioUnitario(Double.parseDouble(modeloCarrito.getValueAt(i, 3).toString()));
+        dv.setSubtotal(Double.parseDouble(modeloCarrito.getValueAt(i, 4).toString()));
+        dv.setImei(modeloCarrito.getValueAt(i, 6) != null ? modeloCarrito.getValueAt(i, 6).toString() : "");
+        dv.setDiasGarantia(Integer.parseInt(modeloCarrito.getValueAt(i, 7).toString()));
+        
+        listaDetalles.add(dv);
+    }
+
+    dao.VentaDAO daoVenta = new dao.VentaDAO();
+    int idRecibo = daoVenta.registrarVentaCompleta(venta, listaDetalles);
+
+    if (idRecibo != -1) {
+        JOptionPane.showMessageDialog(this, "¡Éxito!\nTransacción #" + idRecibo + "\nCajero/Técnico: " + nombreCajeroFirma.toUpperCase());
+        
+        if (idOrdenVinculada != -1) {
+            try {
+                dao.OrdenReparacionDAO daoOrden = new dao.OrdenReparacionDAO();
+                String[] textos = daoOrden.obtenerTextosOrden(idOrdenVinculada);
+                String fallaOr = (textos[0] != null && !textos[0].isEmpty()) ? textos[0] : "Revisión general";
+                String trabOr = (textos[1] != null && !textos[1].isEmpty()) ? textos[1] : "Revisión técnica general.";
+                String claveOr = (textos.length > 2 && textos[2] != null) ? textos[2] : "Sin Clave";
+                String fechaOr = daoOrden.obtenerFechaOrden(idOrdenVinculada);
+                
+                String cliOr = txtClienteAsignado.getText();
+                String modOr = "";
+                String tipoOr = "";
+                
+                String q = "SELECT e.modelo FROM ordenes_reparacion o JOIN equipos_registrados e ON o.id_equipo = e.id_equipo WHERE o.id_orden = ?";
+                try (java.sql.Connection con = new factory.ConexionFactory().getConexion();
+                     java.sql.PreparedStatement ps = con.prepareStatement(q)) {
+                    ps.setInt(1, idOrdenVinculada);
+                    try (java.sql.ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) modOr = rs.getString("modelo");
+                    }
+                }
+                
+                String equipoConClave = modOr + "  |  Clave: " + claveOr;
+                String tecnico = nombreCajeroFirma; 
+                
+                utilidades.GeneradorPDF generador = new utilidades.GeneradorPDF();
+                generador.crearTicket(
+                    String.valueOf(idOrdenVinculada), fechaOr, cliOr, equipoConClave, fallaOr, String.valueOf(totalVenta),
+                    "SAIRTECH - TECNOLOGIA", "Santa Barbara, Barrio La Soledad, Frente a Sastreria La Elegancia", "8951-8040",
+                    "OJO no aplica garantia en equipos mojados, pantallas no cuentan con garantía.",
+                    tecnico, trabOr, false, tipoOr, true
+                );
+                
+                daoOrden.actualizarEstadoYCosto(idOrdenVinculada, "Entregado", totalVenta);
+                daoOrden.marcarComoEntregado(idOrdenVinculada, idCajeroFirma);
+
+            } catch (Exception ex) {
+                System.err.println("Error al crear PDF de entrega: " + ex.getMessage());
+            }
+        } else {
+            utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta(); 
+            impresora.imprimirReciboVenta(idRecibo);
+            
+            for (modelo.DetalleVenta dv : listaDetalles) {
+                if (dv.getDiasGarantia() > 0) {
+                    java.util.Calendar cal = java.util.Calendar.getInstance();
+                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+                    String fCompra = sdf.format(cal.getTime());
+                    cal.add(java.util.Calendar.DAY_OF_YEAR, dv.getDiasGarantia());
+                    String fVence = sdf.format(cal.getTime());
+                    
+                    String nomCliente = txtClienteAsignado.getText();
+                    
+                    impresora.imprimirPolizaGarantia(
+                        String.valueOf(idRecibo), fCompra, fVence, nomCliente, "VER REGISTRO", 
+                        dv.getDescripcion(), dv.getImei(), dv.getDiasGarantia(), "ARTICULO"
+                    );
+                }
+            }
+        }
+        
+        modeloCarrito.setRowCount(0); recalcularTotal();
+        idOrdenVinculada = -1; 
+        firmaTemporal = null; 
+        txtBuscarOrden.setEnabled(true); btnVincularOrden.setEnabled(true);
+        tablaPendientes.setEnabled(true); tablaPendientes.setBackground(Color.WHITE); tablaPendientes.setForeground(Color.BLACK);
+        idClienteSeleccionado = 0; txtClienteAsignado.setText("Consumidor Final");
+        cargarOrdenesPendientesVisuales(); 
+        if(modoActual.equals("MOSTRADOR")) txtCodigoBarras.requestFocus(); else txtBuscarOrden.requestFocus();
+    }
+    btnCobrar.setEnabled(true); setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+}
     
     private String[] solicitarFirmaUsuario() {
         javax.swing.JPasswordField txtPass = new javax.swing.JPasswordField();

@@ -45,7 +45,8 @@ public class PanelInventario extends javax.swing.JPanel {
     private JButton btnActualizar;
     private JButton btnLimpiar;
     private JButton btnImprimirEtiqueta;
-    private JButton btnNuevaCategoria; // <--- NUEVO BOTÓN
+    private JButton btnNuevaCategoria; 
+    private JButton btnKardex; // <--- NUEVA VARIABLE KARDEX
     private JButton btnEliminar; 
     private JCheckBox chkVerEliminados; 
 
@@ -144,9 +145,18 @@ public class PanelInventario extends javax.swing.JPanel {
         btnImprimirEtiqueta = new JButton("Imprimir Etiquetas"); estilizarBoton(btnImprimirEtiqueta, new Color(155, 89, 182)); 
         btnImprimirEtiqueta.setEnabled(false); btnImprimirEtiqueta.addActionListener(e -> imprimirEtiquetas());
 
-        // --- NUEVO BOTÓN DE CATEGORÍA ---
         btnNuevaCategoria = new JButton("+ Nueva Categoría"); estilizarBoton(btnNuevaCategoria, new Color(243, 156, 18));
         btnNuevaCategoria.addActionListener(e -> abrirModalCrearCategoria());
+
+        // --- INICIALIZACIÓN DEL BOTÓN KARDEX ---
+        btnKardex = new JButton("VER KARDEX / AUDITORÍA"); 
+        estilizarBoton(btnKardex, new Color(44, 62, 80)); // Un tono oscuro institucional
+        btnKardex.setEnabled(false); // Apagado hasta seleccionar algo
+        btnKardex.addActionListener(e -> {
+            if (idProductoSeleccionado != -1) {
+                new gui.JDialogVisualizarKardex(idProductoSeleccionado).setVisible(true);
+            }
+        });
 
         gbc.gridy++; gbc.insets = new Insets(15, 0, 5, 0); panel.add(btnGuardar, gbc);
         
@@ -155,7 +165,13 @@ public class PanelInventario extends javax.swing.JPanel {
         
         gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(panelAcciones, gbc);
         gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(btnImprimirEtiqueta, gbc);
-        gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0); panel.add(btnNuevaCategoria, gbc); // Se agrega al panel
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0); panel.add(btnNuevaCategoria, gbc); 
+        
+        // --- COLOCACIÓN DEL BOTÓN KARDEX CON LA SEPARACIÓN ---
+        gbc.gridy++; 
+        gbc.insets = new Insets(25, 0, 0, 0); // ¡Aquí están los 25 pixeles de separación vertical!
+        panel.add(btnKardex, gbc);
+        
         gbc.gridy++; gbc.weighty = 1.0; panel.add(Box.createVerticalGlue(), gbc);
 
         return panel;
@@ -196,7 +212,6 @@ public class PanelInventario extends javax.swing.JPanel {
         btn.setPreferredSize(new Dimension(0, 40)); btn.setFocusPainted(false); btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     }
 
-    // --- NUEVO: MODAL DE CREACIÓN DE CATEGORÍAS ---
     private void abrirModalCrearCategoria() {
         javax.swing.JDialog dialogo = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Nueva Categoría", true);
         dialogo.setSize(400, 360);
@@ -236,7 +251,6 @@ public class PanelInventario extends javax.swing.JPanel {
         cmbDias.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         cmbDias.setEnabled(false); // Apagado por defecto
 
-        // Lógica de encendido/apagado
         chkGarantia.addActionListener(e -> cmbDias.setEnabled(chkGarantia.isSelected()));
 
         gbc.insets = new java.awt.Insets(5, 0, 2, 0);
@@ -274,22 +288,20 @@ public class PanelInventario extends javax.swing.JPanel {
                 dias = Integer.parseInt(cmbDias.getSelectedItem().toString());
             }
 
-            // --- MAGIA CONECTADA AL DAO ---
             modelo.CategoriaProducto nuevaCat = new modelo.CategoriaProducto();
             nuevaCat.setNombreCategoria(nombre);
-            nuevaCat.setDescripcion(""); // No ocupamos descripción por ahora, se envía vacío
+            nuevaCat.setDescripcion(""); 
             nuevaCat.setDiasGarantia(dias);
 
             dao.CategoriaProductoDAO daoCat = new dao.CategoriaProductoDAO();
             
-            // Aquí intentamos insertar en la BD
             if (daoCat.insertar(nuevaCat)) {
                 JOptionPane.showMessageDialog(dialogo, "Categoría guardada exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                cargarCategorias(); // Recarga el ComboBox principal al instante
-                cmbCategoria.setSelectedItem(nombre); // Selecciona la que acabas de crear
-                dialogo.dispose(); // Cierra el modal
+                cargarCategorias(); 
+                cmbCategoria.setSelectedItem(nombre); 
+                dialogo.dispose(); 
             } else {
-                JOptionPane.showMessageDialog(dialogo, "Error al guardar la categoría en la Base de Datos. Revisa la consola de NetBeans.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialogo, "Error al guardar la categoría.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
@@ -356,7 +368,14 @@ public class PanelInventario extends javax.swing.JPanel {
             
             txtPrecioCompra.setText(tablaProductos.getValueAt(fila, 5).toString());
             txtPrecioVenta.setText(tablaProductos.getValueAt(fila, 6).toString());
+            
+            // --- BLOQUEO DE SEGURIDAD PARA STOCK ---
             txtStock.setText(tablaProductos.getValueAt(fila, 7).toString());
+            txtStock.setEnabled(false); // Deshabilitar edición directa
+            txtStock.setBackground(new Color(236, 240, 241)); // Un gris muy claro para indicar bloqueo
+            txtStock.setToolTipText("Para ajustar el stock use el botón KARDEX");
+            // ----------------------------------------
+
             txtStockMinimo.setText(tablaProductos.getValueAt(fila, 8).toString());
 
             if (tablaProductos.getColumnCount() > 11) {
@@ -371,26 +390,41 @@ public class PanelInventario extends javax.swing.JPanel {
                 txtPrecioTecnico.setText(tablaProductos.getValueAt(fila, 11).toString());
             }
 
-            btnGuardar.setEnabled(false); btnActualizar.setEnabled(true); btnImprimirEtiqueta.setEnabled(true);
+            btnGuardar.setEnabled(false); 
+            btnActualizar.setEnabled(true); 
+            btnImprimirEtiqueta.setEnabled(true);
             btnEliminar.setEnabled(true);
+            btnKardex.setEnabled(true); 
         }
     }
-
     private void guardarProducto() {
         if (!validarFormulario()) return;
-        modelo.Producto p = capturarDatosFormulario();
-        dao.ProductoDAO daoProd = new dao.ProductoDAO();
-        int idGenerado = daoProd.insertarConId(p);
         
-        if (idGenerado != -1) {
-            if (p.getCodigoBarras() == null || p.getCodigoBarras().trim().isEmpty()) {
-                String codigoAutomatico = String.format("%011d", idGenerado);
-                daoProd.actualizarCodigoBarras(idGenerado, codigoAutomatico);
+        // --- ESCUDO ANTI-DOBLE CLIC (Nivel 4) ---
+        btnGuardar.setEnabled(false); // Apagamos el botón
+        setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR)); // Ponemos el cursor de "cargando"
+
+        try {
+            modelo.Producto p = capturarDatosFormulario();
+            dao.ProductoDAO daoProd = new dao.ProductoDAO();
+            int idGenerado = daoProd.insertarConId(p);
+            
+            if (idGenerado != -1) {
+                if (p.getCodigoBarras() == null || p.getCodigoBarras().trim().isEmpty()) {
+                    String codigoAutomatico = String.format("%011d", idGenerado);
+                    daoProd.actualizarCodigoBarras(idGenerado, codigoAutomatico);
+                }
+                JOptionPane.showMessageDialog(this, "Producto guardado exitosamente.");
+                limpiarFormulario(); // El método limpiar ya se encarga de volver a encender el botón
+                cargarTabla("");
+            } else {
+                // Si falló (por ejemplo, porque el código de barras ya existía), 
+                // volvemos a encender el botón manualmente para que pueda intentar de nuevo.
+                btnGuardar.setEnabled(true);
             }
-            JOptionPane.showMessageDialog(this, "Producto guardado exitosamente.");
-            limpiarFormulario(); cargarTabla("");
-        } else {
-            JOptionPane.showMessageDialog(this, "Error al guardar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
+        } finally {
+            // PASE LO QUE PASE (Éxito o error), devolvemos el cursor a la normalidad
+            setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         }
     }
 
@@ -475,7 +509,11 @@ public class PanelInventario extends javax.swing.JPanel {
         txtCodigo.setText(""); txtNombre.setText(""); txtUbicacion.setText("");
         cmbCategoria.setSelectedIndex(0); cmbProveedor.setSelectedIndex(0); 
         txtPrecioCompra.setText(""); txtPrecioVenta.setText("");
-        txtStock.setText(""); txtStockMinimo.setText("5");
+        txtStock.setText("");
+        txtStock.setEnabled(true); // <--- Habilitar de nuevo
+        txtStock.setBackground(Color.WHITE); // <--- Fondo blanco de nuevo
+        txtStock.setToolTipText(null);
+        txtStockMinimo.setText("5");
         
         chkAplicaTecnico.setSelected(false);
         txtPrecioTecnico.setText("0.00");
@@ -483,6 +521,7 @@ public class PanelInventario extends javax.swing.JPanel {
         
         btnGuardar.setEnabled(true); btnActualizar.setEnabled(false); 
         btnImprimirEtiqueta.setEnabled(false); btnEliminar.setEnabled(false);
+        btnKardex.setEnabled(false); // <--- APAGA EL BOTÓN KARDEX AL LIMPIAR
         tablaProductos.clearSelection();
     }
 
@@ -509,6 +548,7 @@ public class PanelInventario extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(this, "Ingrese un número entero válido mayor a cero.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
                 
 
 
