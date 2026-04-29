@@ -15,12 +15,28 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         this.setLocationRelativeTo(null);
         aplicarDisenoPrincipal();
         this.setExtendedState(javax.swing.JFrame.MAXIMIZED_BOTH);
+        
+        setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
+        
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent evt) {
+                setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR));
+                
+                utilidades.BackupAutomatico.realizarRespaldoSilencioso("CIERRE");
+                
+                System.exit(0);
+            }
+        });
 
         panelMenu.setVisible(false);
 
         PanelLogin login = new PanelLogin();
         mostrarPanel(login);
         new dao.UsuarioDAO().inicializarAdministradorDefecto();
+        
+        // 3. ACTUALIZAMOS LA LLAMADA DE ARRANQUE PARA QUE DIGA "INICIO"
+        new Thread(() -> utilidades.BackupAutomatico.realizarRespaldoSilencioso("INICIO")).start();
     }
     
     public void habilitarSistema(String rol, String nombreUsuario) { 
@@ -91,6 +107,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         panelContenedor = new javax.swing.JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("SAIRTECH SYSTEMS");
 
         jPanel2.setBackground(new java.awt.Color(255, 255, 255));
 
@@ -218,7 +235,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         btnIngresoEquipos = new javax.swing.JButton("Ingreso de Equipos");
         btnControlOrdenes = new javax.swing.JButton("Control de Órdenes");
-        btnEntregaEquipos = new javax.swing.JButton("Entrega / Cobro");
         btnPuntoVenta = new javax.swing.JButton("Punto de Venta");
         btnInventario = new javax.swing.JButton("Inventario");
         btnProveedores = new javax.swing.JButton("Proveedores");
@@ -249,7 +265,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.JPanel catTaller = crearMenuColapsable("[ Taller y Servicios ]", true, btnIngresoEquipos, btnControlOrdenes, btnEntregaEquipos);
+        javax.swing.JPanel catTaller = crearMenuColapsable("[ Taller y Servicios ]", true, btnIngresoEquipos, btnControlOrdenes);
         // --- METEMOS EL BOTÓN DE GARANTÍAS AL DIRECTORIO ---
         javax.swing.JPanel catDirectorios = crearMenuColapsable("[ Directorios ]", false, btnClientes, btnHistorialEquipos, btnHistorialVentas, btnHistorialGarantias);
         javax.swing.JPanel catVentas = crearMenuColapsable("[ Ventas e Inventario ]", false, btnPuntoVenta, btnInventario, btnProveedores);
@@ -362,8 +378,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         seleccionarBotonMenu(btnPanelKnijico);
     }
     
-    private void btnEntregaCobroActionPerformed(java.awt.event.ActionEvent evt) {                                             
-        mostrarPanel(new PanelPuntoVenta("TALLER")); 
+    private void btnEntregaCobroActionPerformed(java.awt.event.ActionEvent evt) {                                              
+        mostrarPanel(PanelPuntoVenta.getInstancia()); 
         seleccionarBotonMenu(btnEntregaEquipos); 
     }
 
@@ -398,8 +414,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         seleccionarBotonMenu(btnHistorialGarantias);
     }
     
-    private void btnPuntoVentaActionPerformed(java.awt.event.ActionEvent evt) {                                             
-        mostrarPanel(new PanelPuntoVenta("MOSTRADOR")); 
+    private void btnPuntoVentaActionPerformed(java.awt.event.ActionEvent evt) {                                              
+        mostrarPanel(PanelPuntoVenta.getInstancia()); 
         seleccionarBotonMenu(btnPuntoVenta);        
     }
     
@@ -465,7 +481,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private void asignarEventosBotones() {
         btnIngresoEquipos.addActionListener(this::btnIngresoActionPerformed);
         btnControlOrdenes.addActionListener(this::btnListadoActionPerformed);
-        btnEntregaEquipos.addActionListener(this::btnEntregaCobroActionPerformed);
         btnPuntoVenta.addActionListener(this::btnPuntoVentaActionPerformed);
         btnInventario.addActionListener(this::btnInventarioActionPerformed);
         btnProveedores.addActionListener(this::btnProveedoresActionPerformed);

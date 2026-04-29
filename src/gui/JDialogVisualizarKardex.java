@@ -47,9 +47,16 @@ public class JDialogVisualizarKardex extends JDialog {
         btnAgregarAjuste.setPreferredSize(new Dimension(110, 35));
         btnAgregarAjuste.setFocusPainted(false);
         btnAgregarAjuste.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnAgregarAjuste.setToolTipText("Añadir un ajuste manual de inventario");
         
+        // --- LA SOLUCIÓN AL REFRESCO INSTANTÁNEO ---
         btnAgregarAjuste.addActionListener(e -> {
-            new gui.JDialogAjusteManualKardex(this.idProducto).setVisible(true);
+            gui.JDialogAjusteManualKardex modalAjuste = new gui.JDialogAjusteManualKardex(this.idProducto);
+            // Esto obliga a Java a pausar el código hasta que el técnico cierre la ventanita
+            modalAjuste.setModal(true); 
+            modalAjuste.setVisible(true);
+            
+            // Cuando la ventana se cierra, Java continúa aquí y refresca la tabla al instante
             cargarDatosKardex(""); 
         });
         
@@ -76,11 +83,10 @@ public class JDialogVisualizarKardex extends JDialog {
         tablaKardex.getTableHeader().setForeground(Color.GRAY);
         tablaKardex.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(200, 200, 200)));
         
-        // --- LE DAMOS TODO EL ESPACIO A LA DESCRIPCIÓN ---
         if (tablaKardex.getColumnModel().getColumnCount() > 0) {
             tablaKardex.getColumnModel().getColumn(0).setPreferredWidth(60);  // ID
             tablaKardex.getColumnModel().getColumn(1).setPreferredWidth(130); // Fecha
-            tablaKardex.getColumnModel().getColumn(2).setPreferredWidth(350); // Descripción GIGANTE
+            tablaKardex.getColumnModel().getColumn(2).setPreferredWidth(350); // Descripción
             tablaKardex.getColumnModel().getColumn(3).setPreferredWidth(80);  // Cant
             tablaKardex.getColumnModel().getColumn(4).setPreferredWidth(80);  // Saldo
             tablaKardex.getColumnModel().getColumn(5).setPreferredWidth(100); // Usuario
@@ -102,7 +108,6 @@ public class JDialogVisualizarKardex extends JDialog {
         java.util.List<Object[]> lista = kardexDao.listarKardexPorProducto(this.idProducto);
         
         for (Object[] fila : lista) {
-            // Saltamos la columna del precio (fila[5]) y armamos el arreglo solo con lo que necesitamos
             modeloKardex.addRow(new Object[]{fila[0], fila[1], fila[2], fila[3], fila[4], fila[6]});
         }
         
@@ -125,7 +130,6 @@ public class JDialogVisualizarKardex extends JDialog {
             }
         });
     }
-
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {

@@ -28,7 +28,8 @@ public class PanelKnijico extends JPanel {
     private JTextField txtCodigoBarras; 
     
     private JButton btnGuardar, btnActualizar, btnLimpiar;
-    private JButton btnImprimirEtiqueta; // <--- NUEVO BOTÓN
+    private JButton btnImprimirEtiqueta; 
+    private JButton btnKardexKnijico; // <--- NUEVO BOTÓN KARDEX
 
     public PanelKnijico() {
         dao = new KnijicoDAO();
@@ -205,11 +206,28 @@ public class PanelKnijico extends JPanel {
 
         // --- BOTÓN DE IMPRIMIR ETIQUETA ---
         btnImprimirEtiqueta = new JButton("Imprimir Etiqueta");
-        btnImprimirEtiqueta.setBackground(new Color(52, 73, 94)); // Gris oscuro elegante
+        btnImprimirEtiqueta.setBackground(new Color(52, 73, 94)); 
         btnImprimirEtiqueta.setForeground(Color.WHITE);
         btnImprimirEtiqueta.setEnabled(false);
         btnImprimirEtiqueta.setFocusPainted(false);
         btnImprimirEtiqueta.addActionListener(e -> imprimirEtiquetaCodigo());
+        
+        // --- BOTÓN KARDEX KNIJICO ---
+        btnKardexKnijico = new JButton("KARDEX PANTALLA");
+        btnKardexKnijico.setBackground(new Color(44, 62, 80)); // Tono oscuro institucional
+        btnKardexKnijico.setForeground(Color.WHITE);
+        btnKardexKnijico.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnKardexKnijico.setPreferredSize(new Dimension(0, 35));
+        btnKardexKnijico.setFocusPainted(false);
+        btnKardexKnijico.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnKardexKnijico.setEnabled(false); // Apagado hasta seleccionar
+        
+        btnKardexKnijico.addActionListener(e -> {
+            if (idPantallaSeleccionada != -1) {
+                // Sumamos 70000 para que el KardexDAO sepa que es de Knijico
+                new gui.JDialogVisualizarKardex(idPantallaSeleccionada + 70000).setVisible(true);
+            }
+        });
 
         gbc.gridy++; gbc.insets = new Insets(15, 0, 0, 0); panel.add(btnGuardar, gbc);
         
@@ -218,6 +236,9 @@ public class PanelKnijico extends JPanel {
         gbc.gridy++; gbc.insets = new Insets(5, 0, 0, 0); panel.add(pAcciones, gbc);
         
         gbc.gridy++; gbc.insets = new Insets(5, 0, 0, 0); panel.add(btnImprimirEtiqueta, gbc);
+        
+        // Colocamos el botón Kardex con una separación especial
+        gbc.gridy++; gbc.insets = new Insets(20, 0, 0, 0); panel.add(btnKardexKnijico, gbc);
 
         gbc.gridy++; gbc.weighty = 1.0; panel.add(Box.createVerticalGlue(), gbc);
         return panel;
@@ -256,14 +277,18 @@ public class PanelKnijico extends JPanel {
             txtCaja.setText(tablaInventario.getValueAt(fila, 9).toString());
             int idLoteOrig = Integer.parseInt(tablaInventario.getValueAt(fila, 10).toString());
             
-            // Verificamos que el código de barras no sea null antes de pintar
             Object objCodigo = tablaInventario.getValueAt(fila, 11);
             txtCodigoBarras.setText(objCodigo != null ? objCodigo.toString() : ""); 
             
             txtCosto.setText(tablaInventario.getValueAt(fila, 3).toString());
             txtPrecioCliente.setText(tablaInventario.getValueAt(fila, 4).toString());
             txtPrecioTecnico.setText(tablaInventario.getValueAt(fila, 5).toString());
+            
+            // --- BLOQUEO DE SEGURIDAD PARA STOCK KNIJICO ---
             txtStock.setText(tablaInventario.getValueAt(fila, 6).toString());
+            txtStock.setEnabled(false); // Deshabilitar edición directa
+            txtStock.setBackground(new Color(236, 240, 241)); // Gris claro de bloqueo
+            txtStock.setToolTipText("Para ajustar el stock de pantallas existentes, use el botón KARDEX PANTALLA");
 
             for (int i = 0; i < cmbLoteRegistro.getItemCount(); i++) {
                 if (cmbLoteRegistro.getItemAt(i).getId() == idLoteOrig) {
@@ -272,7 +297,8 @@ public class PanelKnijico extends JPanel {
             }
             btnGuardar.setEnabled(false); 
             btnActualizar.setEnabled(true);
-            btnImprimirEtiqueta.setEnabled(true); // <--- ACTIVAMOS BOTÓN IMPRIMIR
+            btnImprimirEtiqueta.setEnabled(true); 
+            btnKardexKnijico.setEnabled(true); // <--- ACTIVAMOS BOTÓN KARDEX
         }
     }
 
@@ -303,6 +329,8 @@ public class PanelKnijico extends JPanel {
             double costo = Double.parseDouble(txtCosto.getText().trim());
             double pCli = Double.parseDouble(txtPrecioCliente.getText().trim());
             double pTec = Double.parseDouble(txtPrecioTecnico.getText().trim());
+            
+            // Si el stock está deshabilitado, capturamos el actual sin cambios
             int stock = Integer.parseInt(txtStock.getText().trim());
             String codigo = txtCodigoBarras.getText().trim();
 
@@ -316,12 +344,20 @@ public class PanelKnijico extends JPanel {
     private void limpiarFormulario() {
         idPantallaSeleccionada = -1;
         txtModelo.setText(""); txtCosto.setText(""); txtPrecioCliente.setText("");
-        txtPrecioTecnico.setText(""); txtStock.setText(""); txtCaja.setText("1");
+        txtPrecioTecnico.setText(""); txtCaja.setText("1");
         txtCodigoBarras.setText(""); 
+        
+        // --- DESBLOQUEO DE STOCK PARA NUEVAS PANTALLAS ---
+        txtStock.setText("");
+        txtStock.setEnabled(true);
+        txtStock.setBackground(Color.WHITE);
+        txtStock.setToolTipText(null);
+        
         tablaInventario.clearSelection();
         btnGuardar.setEnabled(true); 
         btnActualizar.setEnabled(false);
-        btnImprimirEtiqueta.setEnabled(false); // <--- DESACTIVAMOS BOTÓN IMPRIMIR
+        btnImprimirEtiqueta.setEnabled(false); 
+        btnKardexKnijico.setEnabled(false); // <--- DESACTIVAMOS BOTÓN KARDEX
     }
 
     private void alternarEstadoPantalla() {
@@ -342,7 +378,6 @@ public class PanelKnijico extends JPanel {
         }
     }
 
-    // --- MAGIA: MÉTODO DE IMPRESIÓN ---
     private void imprimirEtiquetaCodigo() {
         if (idPantallaSeleccionada == -1) return;
         
@@ -358,12 +393,10 @@ public class PanelKnijico extends JPanel {
             return;
         }
 
-        // --- LLAMADO A LA IMPRESIÓN DIRECTA ---
         utilidades.ImpresoraDirecta impresora = new utilidades.ImpresoraDirecta();
         boolean ok = impresora.imprimirEtiquetaKnijicoDirecta(modelo, codigo, lote, caja);
         
         if (ok) {
-            // Como la impresión es instantánea, puedes omitir este mensaje o dejarlo.
             JOptionPane.showMessageDialog(this, "Etiqueta enviada a la impresora.", "Impresión Exitosa", JOptionPane.INFORMATION_MESSAGE);
         } else {
             JOptionPane.showMessageDialog(this, "No se pudo comunicar con la impresora.", "Error de Impresión", JOptionPane.ERROR_MESSAGE);
@@ -377,6 +410,7 @@ public class PanelKnijico extends JPanel {
         @Override public String toString() { return name; }
     }
 
+                 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {

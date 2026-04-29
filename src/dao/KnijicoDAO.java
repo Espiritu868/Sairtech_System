@@ -47,7 +47,7 @@ public class KnijicoDAO {
     // GESTIÓN DE PANTALLAS (REGISTRO Y ACTUALIZACIÓN)
     // =========================================================
 
-public boolean registrarPantalla(int idLote, String modelo, double costo, double pCli, double pTec, int stock, int caja, String codigo) {
+    public boolean registrarPantalla(int idLote, String modelo, double costo, double pCli, double pTec, int stock, int caja, String codigo) {
         String sql = "INSERT INTO pantallas_knijico (id_lote, modelo_equipo, precio_compra, precio_cliente, precio_tecnico, stock, numero_caja, codigo_barras) VALUES (?,?,?,?,?,?,?,?)";
         try (Connection con = new factory.ConexionFactory().getConexion();
              PreparedStatement ps = con.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
@@ -66,19 +66,32 @@ public boolean registrarPantalla(int idLote, String modelo, double costo, double
 
             int filas = ps.executeUpdate();
 
-            // GENERACIÓN AUTOMÁTICA DE CÓDIGO CON PREFIJO 7 (13 dígitos en total)
-            if (filas > 0 && generarAutomatico) {
+            if (filas > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
                         int idGenerado = rs.getInt(1);
-                        // El %012d rellena con ceros hasta tener 12 números, más el 7 inicial = 13 dígitos
-                        String autoCodigo = "7" + String.format("%012d", idGenerado);
-                        String updateSql = "UPDATE pantallas_knijico SET codigo_barras = ? WHERE id_pantalla = ?";
-                        try (PreparedStatement psUpdate = con.prepareStatement(updateSql)) {
-                            psUpdate.setString(1, autoCodigo);
-                            psUpdate.setInt(2, idGenerado);
-                            psUpdate.executeUpdate();
+                        
+                        // GENERACIÓN AUTOMÁTICA DE CÓDIGO CON PREFIJO 7 (13 dígitos en total)
+                        if (generarAutomatico) {
+                            String autoCodigo = "7" + String.format("%012d", idGenerado);
+                            String updateSql = "UPDATE pantallas_knijico SET codigo_barras = ? WHERE id_pantalla = ?";
+                            try (PreparedStatement psUpdate = con.prepareStatement(updateSql)) {
+                                psUpdate.setString(1, autoCodigo);
+                                psUpdate.setInt(2, idGenerado);
+                                psUpdate.executeUpdate();
+                            }
                         }
+                        
+                        // --- MAGIA DEL KARDEX: INVENTARIO INICIAL PARA KNIJICO ---
+                        int idKardexKnijico = idGenerado + 70000;
+                        String sqlKardex = "INSERT INTO kardex (id_producto, id_usuario, fecha_movimiento, tipo_movimiento, cantidad, stock_restante_despues, referencia) VALUES (?, 1, NOW(), 'INVENTARIO_INICIAL', ?, ?, 'Ingreso de Nueva Pantalla Knijico')";
+                        try (PreparedStatement psKardex = con.prepareStatement(sqlKardex)) {
+                            psKardex.setInt(1, idKardexKnijico);
+                            psKardex.setInt(2, stock);
+                            psKardex.setInt(3, stock);
+                            psKardex.executeUpdate();
+                        }
+                        // ---------------------------------------------------------
                     }
                 }
             }

@@ -20,46 +20,60 @@ public class ConexionFactory {
     private static String user = "root";
     private static String pass = "";
     
+    // --- NUEVO: Temporizador para evitar la "tormenta de popups" ---
+    private static long tiempoUltimoError = 0;
+    
     // Este bloque se ejecuta automáticamente al iniciar el programa
     static {
         Properties config = new Properties();
         try {
-            // Intenta leer el archivo de configuración
             config.load(new FileInputStream("config.properties"));
             
-            // Sobrescribe las variables con lo que encuentre en el texto
             host = config.getProperty("IP_SERVIDOR", host);
             port = config.getProperty("PUERTO", port);
             database = config.getProperty("BASE_DATOS", database);
             user = config.getProperty("USUARIO", user);
             pass = config.getProperty("PASSWORD", pass);
             
-            System.out.println("✅ Configuración cargada: Apuntando a " + host);
-            
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "⚠️ No se encontró config.properties en la raíz. Usando localhost por defecto.");
+            // Este es el único error que dejamos silencioso porque el usuario no necesita saber
+            // que se usó la configuración por defecto de localhost.
         }
     }
 
     /**
-     * Obtiene una conexión activa a la base de datos.
+     * Obtiene una conexión activa a la base de datos con protecciones anti-cuelgues.
      * @return Connection
      */
     public Connection getConexion() {
-        // Armamos la URL con las variables que cargamos
-        String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
+        // connectTimeout=3000 : Aborta en 3 segundos si el servidor no responde.
+        // socketTimeout=5000  : Cancela consultas trabadas de más de 5 segundos.
+        // autoReconnect=true  : Reconecta sola ante micro-cortes.
+        String parametrosSeguridad = "?connectTimeout=3000&socketTimeout=5000&autoReconnect=true";
+        String url = "jdbc:mysql://" + host + ":" + port + "/" + database + parametrosSeguridad;
         
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             return DriverManager.getConnection(url, user, pass);
             
         } catch (ClassNotFoundException e) {
-            JOptionPane.showMessageDialog(null, "Error: No se encontró el Driver de MySQL: " + e.getMessage());
+            mostrarErrorControlado("Error Crítico: No se encontró el Driver de MySQL.\nComuníquese con soporte técnico.");
             throw new RuntimeException(e);
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "Error crítico conectando a la base de datos en: " + url);
-            JOptionPane.showMessageDialog(null, "Mensaje: " + e.getMessage());
+            mostrarErrorControlado("⚠️ No se pudo conectar al servidor de base de datos.\nRevise su conexión de red o verifique si el servidor está encendido.\n\nDetalle: " + e.getMessage());
             throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * Muestra un mensaje de error visual, pero evita que salgan 50 ventanas al mismo tiempo.
+     */
+    private void mostrarErrorControlado(String mensaje) {
+        long tiempoActual = System.currentTimeMillis();
+        // Si han pasado más de 5000 milisegundos (5 segundos) desde el último error, mostramos el popup
+        if (tiempoActual - tiempoUltimoError > 5000) {
+            JOptionPane.showMessageDialog(null, mensaje, "Falla de Conexión", JOptionPane.ERROR_MESSAGE);
+            tiempoUltimoError = tiempoActual;
         }
     }
 }

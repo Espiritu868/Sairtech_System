@@ -54,4 +54,45 @@ public class CategoriaProductoDAO {
             return false;
         }
     }
+    
+    // --- NUEVO MÉTODO PARA OBTENER UNA SOLA CATEGORÍA (EDICIÓN) ---
+    public CategoriaProducto obtenerPorId(int idCategoria) {
+        String sql = "SELECT * FROM categorias_productos WHERE id_categoria = ?";
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+             
+            ps.setInt(1, idCategoria);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    CategoriaProducto c = new CategoriaProducto();
+                    c.setIdCategoria(rs.getInt("id_categoria"));
+                    c.setNombreCategoria(rs.getString("nombre_categoria"));
+                    c.setDescripcion(rs.getString("descripcion"));
+                    c.setDiasGarantia(rs.getInt("dias_garantia"));
+                    return c;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener la categoría: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // --- NUEVO MÉTODO PARA GUARDAR LOS CAMBIOS DE EDICIÓN ---
+    public boolean actualizar(CategoriaProducto categoria) {
+        String sql = "UPDATE categorias_productos SET nombre_categoria = ?, descripcion = ?, dias_garantia = ? WHERE id_categoria = ?";
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+             
+            ps.setString(1, categoria.getNombreCategoria());
+            ps.setString(2, categoria.getDescripcion() != null ? categoria.getDescripcion() : "");
+            ps.setInt(3, categoria.getDiasGarantia());
+            ps.setInt(4, categoria.getIdCategoria());
+            
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error al actualizar categoría: " + e.getMessage());
+            return false;
+        }
+    }
 }

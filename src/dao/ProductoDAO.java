@@ -62,19 +62,33 @@ public class ProductoDAO {
             
             if (ps.executeUpdate() > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
-                    if (rs.next()) return rs.getInt(1);
+                    if (rs.next()) {
+                        int idGenerado = rs.getInt(1);
+                        
+                        // --- MAGIA DEL KARDEX: INVENTARIO INICIAL ---
+                        // Registramos el nacimiento del producto en el Kardex. 
+                        // Usamos id_usuario 1 por defecto al ser creación inicial del sistema.
+                        String sqlKardex = "INSERT INTO kardex (id_producto, id_usuario, fecha_movimiento, tipo_movimiento, cantidad, stock_restante_despues, referencia) VALUES (?, 1, NOW(), 'INVENTARIO_INICIAL', ?, ?, 'Ingreso de Nuevo Producto')";
+                        try (PreparedStatement psKardex = con.prepareStatement(sqlKardex)) {
+                            psKardex.setInt(1, idGenerado);
+                            psKardex.setInt(2, producto.getStock());
+                            psKardex.setInt(3, producto.getStock());
+                            psKardex.executeUpdate();
+                        }
+                        // --------------------------------------------
+                        
+                        return idGenerado;
+                    }
                 }
             }
         } catch (java.sql.SQLIntegrityConstraintViolationException e) {
-            // ¡ESTE ES EL ESCUDO! Si alguien intenta meter un código que ya existe
             System.err.println("¡Intento de código duplicado bloqueado por la BD!");
             javax.swing.JOptionPane.showMessageDialog(null, 
                 "El Código de Barras que ingresó ya le pertenece a otro producto.\nPor favor, asigne uno distinto o déjelo en blanco para que el sistema lo genere automáticamente.", 
                 "Código Duplicado", 
                 javax.swing.JOptionPane.WARNING_MESSAGE);
             return -1;
-        } catch (SQLException e) {
-            // Si hay otro tipo de error, lo mostramos en consola para no estar a ciegas
+        } catch (java.sql.SQLException e) {
             System.err.println("Error general al insertar producto: " + e.getMessage());
         }
         return -1;
@@ -258,5 +272,80 @@ public class ProductoDAO {
             }
         } catch (SQLException e) { System.err.println("Error garantía: " + e.getMessage()); }
         return 0; // Si falla o no tiene, devuelve 0
+    }
+    
+    // --- MODIFICADO: Ahora acepta un filtro de Categoría ---
+    public List<Object[]> buscarProductoCompleto(String textoBusqueda, int idCategoriaFiltro, boolean verEliminados) {
+        List<Object[]> lista = new ArrayList<>();
+        int filtroEliminado = verEliminados ? 1 : 0;
+        
+        // Usamos StringBuilder para armar la consulta dinámicamente
+        StringBuilder sql = new StringBuilder(
+            "SELECT p.id_producto, p.codigo_barras, p.nombre_producto, c.nombre_categoria, p.ubicacion, p.precio_compra, p.precio_venta, p.stock, p.stock_minimo, p.id_proveedor, p.aplica_precio_tecnico, p.precio_tecnico " +
+            "FROM productos p " +
+            "JOIN categorias_productos c ON p.id_categoria = c.id_categoria " +
+            "WHERE p.eliminado = ? AND (p.nombre_producto LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?)"
+        );
+
+        // Si se seleccionó una categoría específica en el ComboBox, agregamos la condición
+        if (idCategoriaFiltro > 0) {
+            sql.append(" AND p.id_categoria = ?");
+        }
+
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql.toString())) {
+             
+            String param = "%" + textoBusqueda + "%";
+            ps.setInt(1, filtroEliminado);
+            ps.setString(2, param); 
+            ps.setString(3, param); 
+            ps.setString(4, param);
+            
+            // Si hay categoría, le pasamos el parámetro extra a SQL
+            if (idCategoriaFiltro > 0) {
+                ps.setInt(5, idCategoriaFiltro);
+            }
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Object[] fila = new Object[12]; 
+                    fila[0] = rs.getInt("id_producto");
+                    fila[1] = rs.getString("codigo_barras");
+                    fila[2] = rs.getString("nombre_producto");
+                    fila[3] = rs.getString("nombre_categoria");
+                    fila[4] = rs.getString("ubicacion"); 
+                    fila[5] = rs.getDouble("precio_compra");
+                    fila[6] = rs.getDouble("precio_venta");
+                    fila[7] = rs.getInt("stock");
+                    fila[8] = rs.getInt("stock_minimo");
+                    fila[9] = rs.getInt("id_proveedor");
+                    fila[10] = rs.getBoolean("aplica_precio_tecnico"); 
+                    fila[11] = rs.getDouble("precio_tecnico");
+                    lista.add(fila);
+                }
+            }
+        } catch (SQLException e) { 
+            System.err.println("Error en buscarProductoCompleto: " + e.getMessage()); 
+        }
+        return lista;
+    }
+    
+    
+    // --- NUEVO: Trae todas las ubicaciones únicas registradas para llenar el ComboBox ---
+    public List<String> obtenerUbicaciones() {
+        List<String> ubicaciones = new ArrayList<>();
+        String sql = "SELECT DISTINCT ubicacion FROM productos WHERE ubicacion IS NOT NULL AND ubicacion != '' ORDER BY ubicacion ASC";
+        
+        try (Connection con = factory.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+             
+            while (rs.next()) {
+                ubicaciones.add(rs.getString("ubicacion"));
+            }
+        } catch (SQLException e) { 
+            System.err.println("Error al obtener ubicaciones: " + e.getMessage()); 
+        }
+        return ubicaciones;
     }
 }

@@ -27,7 +27,7 @@ public class PanelInventario extends javax.swing.JPanel {
 
     private JTextField txtCodigo;
     private JTextField txtNombre;
-    private JTextField txtUbicacion; 
+    private JComboBox<String> cmbUbicacion; 
     private JComboBox<String> cmbCategoria;
     private JComboBox<modelo.Proveedor> cmbProveedor; 
     
@@ -39,6 +39,7 @@ public class PanelInventario extends javax.swing.JPanel {
     private JTextField txtStock;
     private JTextField txtStockMinimo;
     private JTextField txtBuscar;
+    private JComboBox<String> cmbFiltroCategoria; 
     private JTable tablaProductos;
     
     private JButton btnGuardar;
@@ -46,12 +47,13 @@ public class PanelInventario extends javax.swing.JPanel {
     private JButton btnLimpiar;
     private JButton btnImprimirEtiqueta;
     private JButton btnNuevaCategoria; 
-    private JButton btnKardex; // <--- NUEVA VARIABLE KARDEX
+    private JButton btnKardex; 
     private JButton btnEliminar; 
     private JCheckBox chkVerEliminados; 
 
     private int idProductoSeleccionado = -1;
     private List<Integer> listaIdCategorias = new ArrayList<>();
+    private List<Integer> listaIdFiltroCategorias = new ArrayList<>(); 
 
     public PanelInventario() {
         setLayout(new BorderLayout(20, 20));
@@ -70,6 +72,7 @@ public class PanelInventario extends javax.swing.JPanel {
         add(panelTabla, BorderLayout.CENTER);
 
         cargarCategorias();
+        cargarUbicaciones(); 
         cargarProveedores(); 
         cargarTabla("");
     }
@@ -92,9 +95,46 @@ public class PanelInventario extends javax.swing.JPanel {
 
         txtCodigo = crearTextField(); 
         txtNombre = crearTextField();
-        txtUbicacion = crearTextField(); 
         
+        // --- CONFIGURACIÓN UBICACIÓN ---
+        JPanel pUbicacion = new JPanel(new BorderLayout(5, 0)); pUbicacion.setOpaque(false);
+        cmbUbicacion = new JComboBox<>(); cmbUbicacion.setPreferredSize(new Dimension(0, 35));
+        cmbUbicacion.setFont(new Font("Segoe UI", Font.PLAIN, 14)); cmbUbicacion.setEditable(false); 
+
+        JPanel pBotonesUbic = new JPanel(new java.awt.GridLayout(1, 2, 2, 0)); pBotonesUbic.setOpaque(false);
+        JButton btnNuevaUbicacion = new JButton("+"); btnNuevaUbicacion.setPreferredSize(new Dimension(45, 35));
+        btnNuevaUbicacion.setBackground(new Color(52, 152, 219)); btnNuevaUbicacion.setForeground(Color.WHITE);
+        btnNuevaUbicacion.setFont(new Font("Segoe UI", Font.BOLD, 16)); btnNuevaUbicacion.setFocusPainted(false);
+        btnNuevaUbicacion.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnNuevaUbicacion.addActionListener(e -> abrirModalNuevaUbicacion());
+
+        JButton btnEditarUbicacion = new JButton("Edit"); btnEditarUbicacion.setPreferredSize(new Dimension(75, 35)); 
+        btnEditarUbicacion.setBackground(new Color(243, 156, 18)); btnEditarUbicacion.setForeground(Color.WHITE);
+        btnEditarUbicacion.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnEditarUbicacion.setFocusPainted(false);
+        btnEditarUbicacion.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnEditarUbicacion.addActionListener(e -> abrirModalEditarUbicacion());
+
+        pBotonesUbic.add(btnNuevaUbicacion); pBotonesUbic.add(btnEditarUbicacion);
+        pUbicacion.add(cmbUbicacion, BorderLayout.CENTER); pUbicacion.add(pBotonesUbic, BorderLayout.EAST);
+        
+        // --- CONFIGURACIÓN CATEGORÍA Y PROVEEDOR ---
         cmbCategoria = new JComboBox<>(); cmbCategoria.setPreferredSize(new Dimension(0, 35));
+        
+        // ¡NUEVO!: Botón editar categoría al lado del ComboBox
+        JPanel pCategoriaContenedor = new JPanel(new BorderLayout(5, 0)); pCategoriaContenedor.setOpaque(false);
+        JButton btnEditarCategoria = new JButton("Edit"); 
+        btnEditarCategoria.setPreferredSize(new Dimension(75, 35)); 
+        btnEditarCategoria.setBackground(new Color(243, 156, 18)); 
+        btnEditarCategoria.setForeground(Color.WHITE);
+        btnEditarCategoria.setFont(new Font("Segoe UI", Font.BOLD, 14)); 
+        btnEditarCategoria.setFocusPainted(false);
+        btnEditarCategoria.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnEditarCategoria.setToolTipText("Editar la categoría seleccionada");
+        btnEditarCategoria.addActionListener(e -> abrirModalEditarCategoria());
+        
+        pCategoriaContenedor.add(cmbCategoria, BorderLayout.CENTER);
+        pCategoriaContenedor.add(btnEditarCategoria, BorderLayout.EAST);
+        
         cmbProveedor = new JComboBox<>(); cmbProveedor.setPreferredSize(new Dimension(0, 35));
         cmbProveedor.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         
@@ -112,13 +152,14 @@ public class PanelInventario extends javax.swing.JPanel {
         gbc.gridy++; panel.add(new JLabel("Nombre del Producto/Repuesto: *"), gbc); gbc.gridy++; panel.add(txtNombre, gbc);
         
         gbc.gridy++; panel.add(new JLabel("Ubicación Física (Ej: Vitrina 1):"), gbc); 
-        gbc.gridy++; panel.add(txtUbicacion, gbc);
+        gbc.gridy++; panel.add(pUbicacion, gbc); 
 
-        JPanel pCombos = new JPanel(new java.awt.GridLayout(1, 2, 10, 0)); pCombos.setOpaque(false);
-        JPanel pCat = new JPanel(new BorderLayout()); pCat.setOpaque(false); pCat.add(new JLabel("Categoría: *"), BorderLayout.NORTH); pCat.add(cmbCategoria, BorderLayout.CENTER);
-        JPanel pProv = new JPanel(new BorderLayout()); pProv.setOpaque(false); pProv.add(new JLabel("Proveedor:"), BorderLayout.NORTH); pProv.add(cmbProveedor, BorderLayout.CENTER);
-        pCombos.add(pCat); pCombos.add(pProv);
-        gbc.gridy++; panel.add(pCombos, gbc);
+        // Modificamos el layout para las categorías, ahora que tiene su botón de editar
+        gbc.gridy++; gbc.insets = new Insets(10, 0, 2, 0); panel.add(new JLabel("Categoría: *"), gbc);
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(pCategoriaContenedor, gbc);
+        
+        gbc.gridy++; gbc.insets = new Insets(5, 0, 2, 0); panel.add(new JLabel("Proveedor:"), gbc);
+        gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(cmbProveedor, gbc);
         
         gbc.gridy++; gbc.insets = new Insets(10, 0, 2, 0); panel.add(new JLabel("P. Compra: *"), gbc);
         gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(txtPrecioCompra, gbc);
@@ -148,10 +189,9 @@ public class PanelInventario extends javax.swing.JPanel {
         btnNuevaCategoria = new JButton("+ Nueva Categoría"); estilizarBoton(btnNuevaCategoria, new Color(243, 156, 18));
         btnNuevaCategoria.addActionListener(e -> abrirModalCrearCategoria());
 
-        // --- INICIALIZACIÓN DEL BOTÓN KARDEX ---
         btnKardex = new JButton("VER KARDEX / AUDITORÍA"); 
-        estilizarBoton(btnKardex, new Color(44, 62, 80)); // Un tono oscuro institucional
-        btnKardex.setEnabled(false); // Apagado hasta seleccionar algo
+        estilizarBoton(btnKardex, new Color(44, 62, 80)); 
+        btnKardex.setEnabled(false); 
         btnKardex.addActionListener(e -> {
             if (idProductoSeleccionado != -1) {
                 new gui.JDialogVisualizarKardex(idProductoSeleccionado).setVisible(true);
@@ -167,9 +207,8 @@ public class PanelInventario extends javax.swing.JPanel {
         gbc.gridy++; gbc.insets = new Insets(0, 0, 5, 0); panel.add(btnImprimirEtiqueta, gbc);
         gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0); panel.add(btnNuevaCategoria, gbc); 
         
-        // --- COLOCACIÓN DEL BOTÓN KARDEX CON LA SEPARACIÓN ---
         gbc.gridy++; 
-        gbc.insets = new Insets(25, 0, 0, 0); // ¡Aquí están los 25 pixeles de separación vertical!
+        gbc.insets = new Insets(25, 0, 0, 0); 
         panel.add(btnKardex, gbc);
         
         gbc.gridy++; gbc.weighty = 1.0; panel.add(Box.createVerticalGlue(), gbc);
@@ -180,9 +219,24 @@ public class PanelInventario extends javax.swing.JPanel {
     private JPanel construirPanelTabla() {
         JPanel panel = new JPanel(new BorderLayout(0, 15)); panel.setOpaque(false);
         JPanel panelBuscador = new JPanel(new BorderLayout(10, 0)); panelBuscador.setOpaque(false);
+        
         JLabel lblBuscar = new JLabel("Buscar Producto:"); lblBuscar.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        
+        JPanel pBuscadorCentro = new JPanel(new BorderLayout(10, 0));
+        pBuscadorCentro.setOpaque(false);
+        
         txtBuscar = new JTextField(); txtBuscar.setFont(new Font("Segoe UI", Font.PLAIN, 16)); txtBuscar.setPreferredSize(new Dimension(0, 40));
         txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() { public void keyReleased(java.awt.event.KeyEvent evt) { cargarTabla(txtBuscar.getText().trim()); } });
+        
+        cmbFiltroCategoria = new JComboBox<>();
+        cmbFiltroCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        cmbFiltroCategoria.setPreferredSize(new Dimension(200, 40));
+        cmbFiltroCategoria.addActionListener(e -> {
+            if(cmbFiltroCategoria.getItemCount() > 0) cargarTabla(txtBuscar.getText().trim());
+        });
+        
+        pBuscadorCentro.add(txtBuscar, BorderLayout.CENTER);
+        pBuscadorCentro.add(cmbFiltroCategoria, BorderLayout.EAST);
         
         chkVerEliminados = new JCheckBox("Ver Papelera");
         chkVerEliminados.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -190,7 +244,7 @@ public class PanelInventario extends javax.swing.JPanel {
         chkVerEliminados.addActionListener(e -> cargarTabla(txtBuscar.getText().trim()));
         
         panelBuscador.add(lblBuscar, BorderLayout.WEST); 
-        panelBuscador.add(txtBuscar, BorderLayout.CENTER);
+        panelBuscador.add(pBuscadorCentro, BorderLayout.CENTER);
         panelBuscador.add(chkVerEliminados, BorderLayout.EAST);
 
         tablaProductos = new JTable(); tablaProductos.setRowHeight(30); tablaProductos.setFont(new Font("Segoe UI", Font.PLAIN, 14)); tablaProductos.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -249,7 +303,7 @@ public class PanelInventario extends javax.swing.JPanel {
         });
         cmbDias.setPreferredSize(new Dimension(0, 35));
         cmbDias.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        cmbDias.setEnabled(false); // Apagado por defecto
+        cmbDias.setEnabled(false);
 
         chkGarantia.addActionListener(e -> cmbDias.setEnabled(chkGarantia.isSelected()));
 
@@ -315,10 +369,160 @@ public class PanelInventario extends javax.swing.JPanel {
         dialogo.add(panelFondo);
         dialogo.setVisible(true);
     }
+    
+    // --- NUEVO MODAL: EDITAR CATEGORÍA ---
+    private void abrirModalEditarCategoria() {
+        int indiceSeleccionado = cmbCategoria.getSelectedIndex();
+        if (indiceSeleccionado <= 0) {
+            JOptionPane.showMessageDialog(this, "Seleccione una categoría válida de la lista para editarla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int idCategoria = listaIdCategorias.get(indiceSeleccionado);
+        String nombreAntiguo = cmbCategoria.getSelectedItem().toString().trim();
+        
+        dao.CategoriaProductoDAO daoCat = new dao.CategoriaProductoDAO();
+        modelo.CategoriaProducto catExistente = daoCat.obtenerPorId(idCategoria);
+        
+        if(catExistente == null) {
+            JOptionPane.showMessageDialog(this, "No se encontraron los datos de la categoría.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        javax.swing.JDialog dialogo = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Editar Categoría", true);
+        dialogo.setSize(400, 360);
+        dialogo.setLocationRelativeTo(this);
+        dialogo.setResizable(false);
+
+        JPanel panelFondo = new JPanel(new java.awt.GridBagLayout());
+        panelFondo.setBackground(Color.WHITE);
+        panelFondo.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gbc.insets = new java.awt.Insets(5, 0, 5, 0);
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+
+        JLabel lblTitulo = new JLabel("Editar Categoría");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitulo.setForeground(new Color(44, 62, 80));
+        gbc.gridy = 0; gbc.insets = new java.awt.Insets(0, 0, 15, 0);
+        panelFondo.add(lblTitulo, gbc);
+
+        JTextField txtNombreCat = new JTextField(nombreAntiguo);
+        txtNombreCat.setPreferredSize(new Dimension(0, 35));
+        txtNombreCat.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+        JCheckBox chkGarantia = new JCheckBox("Esta categoría aplica garantía");
+        chkGarantia.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        chkGarantia.setForeground(new Color(41, 128, 185));
+        chkGarantia.setBackground(Color.WHITE);
+        chkGarantia.setFocusPainted(false);
+        chkGarantia.setSelected(catExistente.getDiasGarantia() > 0);
+
+        JComboBox<String> cmbDias = new JComboBox<>(new String[]{
+            "7", "15", "30", "60", "90", "180", "365"
+        });
+        cmbDias.setPreferredSize(new Dimension(0, 35));
+        cmbDias.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        cmbDias.setEnabled(chkGarantia.isSelected());
+        
+        if (catExistente.getDiasGarantia() > 0) {
+            cmbDias.setSelectedItem(String.valueOf(catExistente.getDiasGarantia()));
+        }
+
+        chkGarantia.addActionListener(e -> cmbDias.setEnabled(chkGarantia.isSelected()));
+
+        gbc.insets = new java.awt.Insets(5, 0, 2, 0);
+        gbc.gridy++; panelFondo.add(new JLabel("Nuevo nombre de la Categoría: *"), gbc);
+        gbc.gridy++; panelFondo.add(txtNombreCat, gbc);
+        
+        gbc.gridy++; gbc.insets = new java.awt.Insets(15, 0, 5, 0);
+        panelFondo.add(chkGarantia, gbc);
+        
+        gbc.gridy++; gbc.insets = new java.awt.Insets(5, 0, 2, 0);
+        panelFondo.add(new JLabel("Seleccione los días de cobertura:"), gbc);
+        gbc.gridy++; panelFondo.add(cmbDias, gbc);
+
+        JPanel panelBotones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
+        panelBotones.setOpaque(false);
+
+        JButton btnCancelar = new JButton("Cancelar");
+        btnCancelar.setBackground(new Color(149, 165, 166)); btnCancelar.setForeground(Color.WHITE);
+        btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnCancelar.setFocusPainted(false);
+        btnCancelar.addActionListener(e -> dialogo.dispose());
+
+        JButton btnGuardarCat = new JButton("Actualizar");
+        btnGuardarCat.setBackground(new Color(243, 156, 18)); btnGuardarCat.setForeground(Color.WHITE);
+        btnGuardarCat.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnGuardarCat.setFocusPainted(false);
+
+        btnGuardarCat.addActionListener(e -> {
+            String nombre = txtNombreCat.getText().trim();
+            if (nombre.isEmpty()) {
+                JOptionPane.showMessageDialog(dialogo, "El nombre de la categoría es obligatorio.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            int dias = 0;
+            if (chkGarantia.isSelected()) {
+                dias = Integer.parseInt(cmbDias.getSelectedItem().toString());
+            }
+            
+            catExistente.setNombreCategoria(nombre);
+            catExistente.setDiasGarantia(dias);
+            
+            if (daoCat.actualizar(catExistente)) {
+                JOptionPane.showMessageDialog(dialogo, "Categoría actualizada exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                cargarCategorias(); 
+                cmbCategoria.setSelectedItem(nombre); 
+                cargarTabla(txtBuscar.getText().trim()); // Actualizar la tabla por si cambió la garantía
+                dialogo.dispose(); 
+            } else {
+                JOptionPane.showMessageDialog(dialogo, "Error al actualizar. Posiblemente el nombre ya exista.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        panelBotones.add(btnCancelar);
+        panelBotones.add(btnGuardarCat);
+        panelBotones.setPreferredSize(new Dimension(0, 45));
+
+        gbc.gridy++; gbc.insets = new java.awt.Insets(25, 0, 0, 0);
+        panelFondo.add(panelBotones, gbc);
+
+        dialogo.add(panelFondo);
+        dialogo.setVisible(true);
+    }
 
     private void cargarCategorias() {
-        cmbCategoria.removeAllItems(); listaIdCategorias.clear(); cmbCategoria.addItem("--- Seleccione ---"); listaIdCategorias.add(-1);
-        for (modelo.CategoriaProducto c : new dao.CategoriaProductoDAO().listar()) { cmbCategoria.addItem(c.getNombreCategoria()); listaIdCategorias.add(c.getIdCategoria()); }
+        cmbCategoria.removeAllItems(); 
+        cmbFiltroCategoria.removeAllItems(); 
+        
+        listaIdCategorias.clear(); 
+        listaIdFiltroCategorias.clear(); 
+        
+        cmbCategoria.addItem("--- Seleccione ---"); 
+        cmbFiltroCategoria.addItem("Todas las Categorías"); 
+        
+        listaIdCategorias.add(-1);
+        listaIdFiltroCategorias.add(-1); 
+        
+        for (modelo.CategoriaProducto c : new dao.CategoriaProductoDAO().listar()) { 
+            cmbCategoria.addItem(c.getNombreCategoria()); 
+            listaIdCategorias.add(c.getIdCategoria()); 
+            
+            cmbFiltroCategoria.addItem(c.getNombreCategoria()); 
+            listaIdFiltroCategorias.add(c.getIdCategoria()); 
+        }
+    }
+
+    private void cargarUbicaciones() {
+        cmbUbicacion.removeAllItems();
+        cmbUbicacion.addItem("--- Seleccione ---");
+        List<String> lista = new dao.UbicacionDAO().listar();
+        for (String u : lista) {
+            cmbUbicacion.addItem(u);
+        }
     }
 
     private void cargarProveedores() {
@@ -329,7 +533,11 @@ public class PanelInventario extends javax.swing.JPanel {
 
     private void cargarTabla(String filtro) {
         boolean verPapelera = chkVerEliminados.isSelected();
-        List<Object[]> lista = new dao.ProductoDAO().buscarProductoCompleto(filtro, verPapelera);
+        
+        int indexCat = cmbFiltroCategoria.getSelectedIndex();
+        int idCatFiltro = (indexCat > 0) ? listaIdFiltroCategorias.get(indexCat) : -1;
+        
+        List<Object[]> lista = new dao.ProductoDAO().buscarProductoCompleto(filtro, idCatFiltro, verPapelera);
         
         btnEliminar.setText(verPapelera ? "Restaurar" : "Eliminar");
         btnEliminar.setBackground(verPapelera ? new Color(46, 204, 113) : new Color(231, 76, 60));
@@ -342,13 +550,17 @@ public class PanelInventario extends javax.swing.JPanel {
         tablaProductos.setModel(modelo);
         
         if (tablaProductos.getColumnCount() > 0) {
-            tablaProductos.getColumnModel().getColumn(0).setPreferredWidth(30);
-            tablaProductos.getColumnModel().getColumn(2).setPreferredWidth(200); 
-            for (int i = 9; i <= 11; i++) {
-                tablaProductos.getColumnModel().getColumn(i).setMinWidth(0);
-                tablaProductos.getColumnModel().getColumn(i).setMaxWidth(0);
-                tablaProductos.getColumnModel().getColumn(i).setWidth(0);
+            int[] columnasOcultas = {0, 1, 4, 5, 6, 8, 9, 10, 11};
+            for (int col : columnasOcultas) {
+                tablaProductos.getColumnModel().getColumn(col).setMinWidth(0);
+                tablaProductos.getColumnModel().getColumn(col).setMaxWidth(0);
+                tablaProductos.getColumnModel().getColumn(col).setWidth(0);
+                tablaProductos.getColumnModel().getColumn(col).setPreferredWidth(0);
             }
+            
+            tablaProductos.getColumnModel().getColumn(2).setPreferredWidth(250); 
+            tablaProductos.getColumnModel().getColumn(3).setPreferredWidth(150); 
+            tablaProductos.getColumnModel().getColumn(7).setPreferredWidth(80);  
         }
     }
 
@@ -364,17 +576,15 @@ public class PanelInventario extends javax.swing.JPanel {
             cmbCategoria.setSelectedItem(tablaProductos.getValueAt(fila, 3).toString());
             
             Object ubic = tablaProductos.getValueAt(fila, 4);
-            txtUbicacion.setText(ubic != null ? ubic.toString() : "");
+            cmbUbicacion.setSelectedItem(ubic != null ? ubic.toString() : ""); 
             
             txtPrecioCompra.setText(tablaProductos.getValueAt(fila, 5).toString());
             txtPrecioVenta.setText(tablaProductos.getValueAt(fila, 6).toString());
             
-            // --- BLOQUEO DE SEGURIDAD PARA STOCK ---
             txtStock.setText(tablaProductos.getValueAt(fila, 7).toString());
-            txtStock.setEnabled(false); // Deshabilitar edición directa
-            txtStock.setBackground(new Color(236, 240, 241)); // Un gris muy claro para indicar bloqueo
+            txtStock.setEnabled(false); 
+            txtStock.setBackground(new Color(236, 240, 241)); 
             txtStock.setToolTipText("Para ajustar el stock use el botón KARDEX");
-            // ----------------------------------------
 
             txtStockMinimo.setText(tablaProductos.getValueAt(fila, 8).toString());
 
@@ -397,12 +607,12 @@ public class PanelInventario extends javax.swing.JPanel {
             btnKardex.setEnabled(true); 
         }
     }
+    
     private void guardarProducto() {
         if (!validarFormulario()) return;
         
-        // --- ESCUDO ANTI-DOBLE CLIC (Nivel 4) ---
-        btnGuardar.setEnabled(false); // Apagamos el botón
-        setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR)); // Ponemos el cursor de "cargando"
+        btnGuardar.setEnabled(false); 
+        setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR)); 
 
         try {
             modelo.Producto p = capturarDatosFormulario();
@@ -415,15 +625,13 @@ public class PanelInventario extends javax.swing.JPanel {
                     daoProd.actualizarCodigoBarras(idGenerado, codigoAutomatico);
                 }
                 JOptionPane.showMessageDialog(this, "Producto guardado exitosamente.");
-                limpiarFormulario(); // El método limpiar ya se encarga de volver a encender el botón
+                limpiarFormulario(); 
                 cargarTabla("");
+                cargarUbicaciones(); 
             } else {
-                // Si falló (por ejemplo, porque el código de barras ya existía), 
-                // volvemos a encender el botón manualmente para que pueda intentar de nuevo.
                 btnGuardar.setEnabled(true);
             }
         } finally {
-            // PASE LO QUE PASE (Éxito o error), devolvemos el cursor a la normalidad
             setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         }
     }
@@ -435,7 +643,9 @@ public class PanelInventario extends javax.swing.JPanel {
         
         if (new dao.ProductoDAO().actualizar(p)) {
             JOptionPane.showMessageDialog(this, "Producto actualizado exitosamente.");
-            limpiarFormulario(); cargarTabla("");
+            limpiarFormulario(); 
+            cargarTabla("");
+            cargarUbicaciones(); 
         } else {
             JOptionPane.showMessageDialog(this, "Error al actualizar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -499,19 +709,25 @@ public class PanelInventario extends javax.swing.JPanel {
             pTecnico = Double.parseDouble(txtPrecioTecnico.getText().trim());
         }
         p.setPrecioTecnico(pTecnico);
-        p.setUbicacion(txtUbicacion.getText().trim());
+        
+        String ubic = "";
+        if (cmbUbicacion.getSelectedIndex() > 0) { 
+            ubic = cmbUbicacion.getSelectedItem().toString().trim();
+        }
+        p.setUbicacion(ubic);
         
         return p;
     }
 
     private void limpiarFormulario() {
         idProductoSeleccionado = -1;
-        txtCodigo.setText(""); txtNombre.setText(""); txtUbicacion.setText("");
+        txtCodigo.setText(""); txtNombre.setText(""); 
+        cmbUbicacion.setSelectedIndex(0); 
         cmbCategoria.setSelectedIndex(0); cmbProveedor.setSelectedIndex(0); 
         txtPrecioCompra.setText(""); txtPrecioVenta.setText("");
         txtStock.setText("");
-        txtStock.setEnabled(true); // <--- Habilitar de nuevo
-        txtStock.setBackground(Color.WHITE); // <--- Fondo blanco de nuevo
+        txtStock.setEnabled(true); 
+        txtStock.setBackground(Color.WHITE); 
         txtStock.setToolTipText(null);
         txtStockMinimo.setText("5");
         
@@ -521,7 +737,7 @@ public class PanelInventario extends javax.swing.JPanel {
         
         btnGuardar.setEnabled(true); btnActualizar.setEnabled(false); 
         btnImprimirEtiqueta.setEnabled(false); btnEliminar.setEnabled(false);
-        btnKardex.setEnabled(false); // <--- APAGA EL BOTÓN KARDEX AL LIMPIAR
+        btnKardex.setEnabled(false); 
         tablaProductos.clearSelection();
     }
 
@@ -548,10 +764,166 @@ public class PanelInventario extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(this, "Ingrese un número entero válido mayor a cero.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+    
+    private void abrirModalNuevaUbicacion() {
+        javax.swing.JDialog dialogo = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Nueva Ubicación", true);
+        dialogo.setSize(380, 240);
+        dialogo.setLocationRelativeTo(this);
+        dialogo.setResizable(false);
 
-                
+        JPanel panelFondo = new JPanel(new java.awt.GridBagLayout());
+        panelFondo.setBackground(Color.WHITE);
+        panelFondo.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
 
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gbc.insets = new java.awt.Insets(5, 0, 5, 0);
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
 
+        JLabel lblTitulo = new JLabel("Nueva Ubicación");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitulo.setForeground(new Color(44, 62, 80));
+        gbc.gridy = 0; gbc.insets = new java.awt.Insets(0, 0, 15, 0);
+        panelFondo.add(lblTitulo, gbc);
+
+        JTextField txtNuevoNombre = new JTextField();
+        txtNuevoNombre.setPreferredSize(new Dimension(0, 35));
+        txtNuevoNombre.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+        gbc.insets = new java.awt.Insets(5, 0, 2, 0);
+        gbc.gridy++; panelFondo.add(new JLabel("Nombre de la nueva vitrina (Ej: Vitrina 5):"), gbc);
+        gbc.gridy++; panelFondo.add(txtNuevoNombre, gbc);
+
+        JPanel panelBotones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
+        panelBotones.setOpaque(false);
+
+        JButton btnCancelar = new JButton("Cancelar");
+        btnCancelar.setBackground(new Color(149, 165, 166)); 
+        btnCancelar.setForeground(Color.WHITE);
+        btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14)); 
+        btnCancelar.setFocusPainted(false);
+        btnCancelar.addActionListener(e -> dialogo.dispose());
+
+        JButton btnGuardar = new JButton("Guardar");
+        btnGuardar.setBackground(new Color(46, 204, 113)); 
+        btnGuardar.setForeground(Color.WHITE);
+        btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 14)); 
+        btnGuardar.setFocusPainted(false);
+
+        btnGuardar.addActionListener(e -> {
+            String nueva = txtNuevoNombre.getText().trim();
+            
+            if (nueva.isEmpty()) {
+                JOptionPane.showMessageDialog(dialogo, "El nombre no puede estar vacío.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            if (new dao.UbicacionDAO().insertar(nueva)) {
+                cargarUbicaciones(); 
+                cmbUbicacion.setSelectedItem(nueva);
+                JOptionPane.showMessageDialog(dialogo, "Ubicación agregada correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                dialogo.dispose();
+            } else {
+                JOptionPane.showMessageDialog(dialogo, "La ubicación ya existe o hubo un error al guardarla.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        panelBotones.add(btnCancelar);
+        panelBotones.add(btnGuardar);
+        panelBotones.setPreferredSize(new Dimension(0, 45));
+
+        gbc.gridy++; gbc.insets = new java.awt.Insets(25, 0, 0, 0);
+        panelFondo.add(panelBotones, gbc);
+
+        dialogo.add(panelFondo);
+        dialogo.setVisible(true);
+    }
+    
+    private void abrirModalEditarUbicacion() {
+        if (cmbUbicacion.getSelectedIndex() <= 0) {
+            JOptionPane.showMessageDialog(this, "Seleccione una ubicación de la lista para poder editarla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String nombreAntiguo = cmbUbicacion.getSelectedItem().toString().trim();
+
+        javax.swing.JDialog dialogo = new javax.swing.JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Modificar Ubicación", true);
+        dialogo.setSize(380, 240);
+        dialogo.setLocationRelativeTo(this);
+        dialogo.setResizable(false);
+
+        JPanel panelFondo = new JPanel(new java.awt.GridBagLayout());
+        panelFondo.setBackground(Color.WHITE);
+        panelFondo.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gbc.insets = new java.awt.Insets(5, 0, 5, 0);
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+
+        JLabel lblTitulo = new JLabel("Editar Ubicación");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitulo.setForeground(new Color(44, 62, 80));
+        gbc.gridy = 0; gbc.insets = new java.awt.Insets(0, 0, 15, 0);
+        panelFondo.add(lblTitulo, gbc);
+
+        JTextField txtNuevoNombre = new JTextField(nombreAntiguo);
+        txtNuevoNombre.setPreferredSize(new Dimension(0, 35));
+        txtNuevoNombre.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+        gbc.insets = new java.awt.Insets(5, 0, 2, 0);
+        gbc.gridy++; panelFondo.add(new JLabel("Nuevo nombre de la vitrina:"), gbc);
+        gbc.gridy++; panelFondo.add(txtNuevoNombre, gbc);
+
+        JPanel panelBotones = new JPanel(new java.awt.GridLayout(1, 2, 10, 0));
+        panelBotones.setOpaque(false);
+
+        JButton btnCancelar = new JButton("Cancelar");
+        btnCancelar.setBackground(new Color(149, 165, 166)); btnCancelar.setForeground(Color.WHITE);
+        btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnCancelar.setFocusPainted(false);
+        btnCancelar.addActionListener(e -> dialogo.dispose());
+
+        JButton btnGuardar = new JButton("Actualizar");
+        btnGuardar.setBackground(new Color(243, 156, 18)); 
+        btnGuardar.setForeground(Color.WHITE);
+        btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnGuardar.setFocusPainted(false);
+
+        btnGuardar.addActionListener(e -> {
+            String nombreNuevo = txtNuevoNombre.getText().trim();
+            
+            if (nombreNuevo.isEmpty()) {
+                JOptionPane.showMessageDialog(dialogo, "El nombre no puede estar vacío.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            if (nombreNuevo.equals(nombreAntiguo)) { 
+                dialogo.dispose(); 
+                return;
+            }
+
+            if (new dao.UbicacionDAO().actualizar(nombreAntiguo, nombreNuevo)) {
+                cargarUbicaciones(); 
+                cmbUbicacion.setSelectedItem(nombreNuevo);
+                cargarTabla(txtBuscar.getText().trim()); 
+                JOptionPane.showMessageDialog(dialogo, "Ubicación actualizada correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                dialogo.dispose();
+            } else {
+                JOptionPane.showMessageDialog(dialogo, "Error al actualizar. Posiblemente el nombre ya exista.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        panelBotones.add(btnCancelar);
+        panelBotones.add(btnGuardar);
+        panelBotones.setPreferredSize(new Dimension(0, 45));
+
+        gbc.gridy++; gbc.insets = new java.awt.Insets(25, 0, 0, 0);
+        panelFondo.add(panelBotones, gbc);
+
+        dialogo.add(panelFondo);
+        dialogo.setVisible(true);
+    }
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {

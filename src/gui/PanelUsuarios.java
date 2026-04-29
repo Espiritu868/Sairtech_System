@@ -19,184 +19,96 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
 
 public class PanelUsuarios extends javax.swing.JPanel {
 
+    // Declaración manual de componentes para no depender del diseñador de NetBeans
+    private JButton btnEliminar;
+    private JButton btnEntrar1;
+    private JButton btnLimpiar;
+    private JButton btnModificar;
+    private JComboBox<String> cmbRol;
+    private JScrollPane scrollUsuarios;
+    private JTable tablaUsuarios;
+    private JPasswordField txtPassword;
+    private JTextField txtUsuario;
+
     public PanelUsuarios() {
-        initComponents();
-        cargarTablaUsuarios();
-        aplicarDisenoUsuarios();
+        initComponents(); // Llama al método vacío de NetBeans para que no moleste
+        inicializarComponentesManualmente(); // Inicializamos nuestros botones reales
+        aplicarDisenoUsuarios(); // Aplicamos el diseño moderno
+        cargarTablaUsuarios(); // Llenamos la tabla
+        
         Set<AWTKeyStroke> teclas = new HashSet<>(
                 getFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS)
         );
         teclas.add(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, teclas);
     }
-
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
-
-        jPanel1 = new javax.swing.JPanel();
-        jPanel2 = new javax.swing.JPanel();
-        jPanel3 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        btnLimpiar = new javax.swing.JButton();
-        txtPassword = new javax.swing.JPasswordField();
-        txtUsuario = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        cmbRol = new javax.swing.JComboBox<>();
-        scrollUsuarios = new javax.swing.JScrollPane();
-        tablaUsuarios = new javax.swing.JTable();
-        btnEntrar1 = new javax.swing.JButton();
-        btnModificar = new javax.swing.JButton();
-        btnEliminar = new javax.swing.JButton();
-
-        jPanel2.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jPanel3.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel3.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jLabel1.setFont(new java.awt.Font("Arial", 0, 48)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel1.setText("CREAR USUARIO");
-        jPanel3.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(4, 10, 520, -1));
-
-        btnLimpiar.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        btnLimpiar.setText("Limpiar");
-        btnLimpiar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnLimpiar.addActionListener(this::btnLimpiarActionPerformed);
-        jPanel3.add(btnLimpiar, new org.netbeans.lib.awtextra.AbsoluteConstraints(620, 390, 130, -1));
-
-        txtPassword.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        txtPassword.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+    
+    private void inicializarComponentesManualmente() {
+        txtUsuario = new JTextField();
+        txtUsuario.setPreferredSize(new Dimension(0, 35));
+        txtUsuario.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        txtPassword = new JPasswordField();
+        txtPassword.setPreferredSize(new Dimension(0, 35));
+        txtPassword.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         txtPassword.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 txtPasswordKeyPressed(evt);
             }
         });
-        jPanel3.add(txtPassword, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 140, 210, -1));
-
-        txtUsuario.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        txtUsuario.setHorizontalAlignment(javax.swing.JTextField.CENTER);
-        jPanel3.add(txtUsuario, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 140, 200, -1));
-
-        jLabel2.setFont(new java.awt.Font("Arial", 0, 24)); // NOI18N
-        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel2.setText("Contraseña");
-        jPanel3.add(jLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(320, 100, 130, -1));
-
-        jLabel3.setFont(new java.awt.Font("Arial", 0, 24)); // NOI18N
-        jLabel3.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel3.setText("Nombre de Usuario");
-        jPanel3.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 100, -1, -1));
-
-        cmbRol.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        cmbRol.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Administrador", "Tecnico" }));
-        jPanel3.add(cmbRol, new org.netbeans.lib.awtextra.AbsoluteConstraints(600, 140, -1, -1));
-
-        tablaUsuarios.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        
+        cmbRol = new JComboBox<>(new String[] { "Administrador", "Tecnico" });
+        cmbRol.setPreferredSize(new Dimension(0, 35));
+        cmbRol.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        tablaUsuarios = new JTable();
         tablaUsuarios.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null},
-                {null, null, null},
-                {null, null, null},
-                {null, null, null}
-            },
-            new String [] {
-                "ID", "Usuario", "Rol"
-            }
+            new Object [][] {},
+            new String [] { "ID", "Usuario", "Rol" }
         ) {
-            boolean[] canEdit = new boolean [] {
-                false, false, false
-            };
-
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return canEdit [columnIndex];
-            }
+            boolean[] canEdit = new boolean [] { false, false, false };
+            public boolean isCellEditable(int rowIndex, int columnIndex) { return canEdit [columnIndex]; }
         });
+        
         tablaUsuarios.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 tablaUsuariosMouseClicked(evt);
             }
         });
+        
+        scrollUsuarios = new JScrollPane();
         scrollUsuarios.setViewportView(tablaUsuarios);
-
-        jPanel3.add(scrollUsuarios, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 210, -1, 210));
-
-        btnEntrar1.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        btnEntrar1.setText("Guardar");
-        btnEntrar1.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        
+        btnEntrar1 = new JButton();
         btnEntrar1.addActionListener(this::btnEntrar1ActionPerformed);
-        jPanel3.add(btnEntrar1, new org.netbeans.lib.awtextra.AbsoluteConstraints(620, 210, 130, -1));
-
-        btnModificar.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        btnModificar.setText("Modificar");
-        btnModificar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        
+        btnModificar = new JButton();
         btnModificar.addActionListener(this::btnModificarActionPerformed);
-        jPanel3.add(btnModificar, new org.netbeans.lib.awtextra.AbsoluteConstraints(620, 270, 130, -1));
-
-        btnEliminar.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        btnEliminar.setText("Eliminar");
-        btnEliminar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        
+        btnEliminar = new JButton();
         btnEliminar.addActionListener(this::btnEliminarActionPerformed);
-        jPanel3.add(btnEliminar, new org.netbeans.lib.awtextra.AbsoluteConstraints(620, 330, 130, -1));
+        
+        btnLimpiar = new JButton();
+        btnLimpiar.addActionListener(this::btnLimpiarActionPerformed);
+    }
 
-        jPanel2.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 810, 490));
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 1027, Short.MAX_VALUE)
-            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(jPanel1Layout.createSequentialGroup()
-                    .addGap(0, 0, Short.MAX_VALUE)
-                    .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, Short.MAX_VALUE)))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 627, Short.MAX_VALUE)
-            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(jPanel1Layout.createSequentialGroup()
-                    .addGap(0, 0, Short.MAX_VALUE)
-                    .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, Short.MAX_VALUE)))
-        );
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
-        this.setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 1027, Short.MAX_VALUE)
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addGap(0, 0, Short.MAX_VALUE)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, Short.MAX_VALUE)))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 627, Short.MAX_VALUE)
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addGap(0, 0, Short.MAX_VALUE)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, Short.MAX_VALUE)))
-        );
-    }// </editor-fold>//GEN-END:initComponents
-    
     private void aplicarDisenoUsuarios() {
         this.removeAll();
         this.setLayout(new BorderLayout(20, 20));
         this.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-        this.setBackground(new Color(240, 244, 248)); // Fondo gris claro web
+        this.setBackground(new Color(240, 244, 248));
 
         // TÍTULO SUPERIOR
-        JLabel lblTitulo = new JLabel("Gestión de Usuarios");
+        JLabel lblTitulo = new JLabel("Gestión de Usuarios y Sistema");
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
         lblTitulo.setForeground(new Color(44, 62, 80));
         this.add(lblTitulo, BorderLayout.NORTH);
@@ -224,7 +136,6 @@ public class PanelUsuarios extends javax.swing.JPanel {
         gbc.weightx = 1.0;
         gbc.gridx = 0;
 
-        // Título del formulario
         JLabel lblSub = new JLabel("Datos del Usuario");
         lblSub.setFont(new Font("Segoe UI", Font.BOLD, 18));
         lblSub.setForeground(Color.GRAY);
@@ -242,17 +153,24 @@ public class PanelUsuarios extends javax.swing.JPanel {
 
         gbc.gridy++; gbc.insets = new Insets(25, 0, 0, 0);
 
-        // Panel para agrupar botones en una cuadrícula 2x2
         JPanel panelBotones = new JPanel(new GridLayout(2, 2, 10, 10));
         panelBotones.setOpaque(false);
 
-        // Estilizamos tus botones con colores FlatLaf modernos
         btnEntrar1.setText("Guardar"); 
         btnEntrar1.setBackground(new Color(46, 204, 113)); btnEntrar1.setForeground(Color.WHITE);
+        btnEntrar1.setFocusPainted(false); btnEntrar1.setFont(new Font("Segoe UI", Font.BOLD, 14));
         
+        btnModificar.setText("Modificar");
         btnModificar.setBackground(new Color(52, 152, 219)); btnModificar.setForeground(Color.WHITE);
+        btnModificar.setFocusPainted(false); btnModificar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        
+        btnEliminar.setText("Eliminar");
         btnEliminar.setBackground(new Color(231, 76, 60)); btnEliminar.setForeground(Color.WHITE);
+        btnEliminar.setFocusPainted(false); btnEliminar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        
+        btnLimpiar.setText("Limpiar");
         btnLimpiar.setBackground(Color.GRAY); btnLimpiar.setForeground(Color.WHITE);
+        btnLimpiar.setFocusPainted(false); btnLimpiar.setFont(new Font("Segoe UI", Font.BOLD, 14));
 
         panelBotones.add(btnEntrar1);
         panelBotones.add(btnModificar);
@@ -261,16 +179,62 @@ public class PanelUsuarios extends javax.swing.JPanel {
 
         gbc.gridy++; panelFormulario.add(panelBotones, gbc);
 
-        // Empujar todo hacia arriba
+        // --- NUEVA SECCIÓN: RESPALDOS DEL SISTEMA ---
+        gbc.gridy++; gbc.insets = new Insets(40, 0, 5, 0);
+        JLabel lblSys = new JLabel("Configuración de Seguridad");
+        lblSys.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblSys.setForeground(Color.GRAY);
+        panelFormulario.add(lblSys, gbc);
+
+        JButton btnConfigurarBackup = new JButton("Cambiar Ruta de Respaldo");
+        btnConfigurarBackup.setBackground(new Color(142, 68, 173)); // Morado elegante
+        btnConfigurarBackup.setForeground(Color.WHITE);
+        btnConfigurarBackup.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnConfigurarBackup.setPreferredSize(new Dimension(0, 40));
+        btnConfigurarBackup.setFocusPainted(false);
+        btnConfigurarBackup.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnConfigurarBackup.addActionListener(e -> configurarRutaBackup());
+
+        gbc.gridy++; gbc.insets = new Insets(5, 0, 0, 0);
+        panelFormulario.add(btnConfigurarBackup, gbc);
+        // ----------------------------------------------
+
         gbc.gridy++; gbc.weighty = 1.0;
         panelFormulario.add(Box.createVerticalGlue(), gbc);
 
-        // ENSAMBLAR TODO EN EL PANEL PRINCIPAL
         this.add(scrollUsuarios, BorderLayout.CENTER);
         this.add(panelFormulario, BorderLayout.EAST); 
 
         this.revalidate();
         this.repaint();
+    }
+    
+    private void configurarRutaBackup() {
+        javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+        chooser.setDialogTitle("Seleccione la carpeta destino para los respaldos");
+        chooser.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
+        chooser.setAcceptAllFileFilterUsed(false);
+
+        String rutaActual = utilidades.BackupAutomatico.obtenerRutaBackup();
+        java.io.File archivoActual = new java.io.File(rutaActual);
+        if (archivoActual.exists()) {
+            chooser.setCurrentDirectory(archivoActual);
+        }
+
+        int seleccion = chooser.showOpenDialog(this);
+        if (seleccion == javax.swing.JFileChooser.APPROVE_OPTION) {
+            String nuevaRuta = chooser.getSelectedFile().getAbsolutePath();
+            
+            if (utilidades.BackupAutomatico.guardarNuevaRutaBackup(nuevaRuta)) {
+                javax.swing.JOptionPane.showMessageDialog(this,
+                    "Ruta de respaldos actualizada correctamente a:\n" + nuevaRuta + "\n\nEl sistema guardará sus copias de seguridad aquí a partir de mañana.",
+                    "Configuración Guardada", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                javax.swing.JOptionPane.showMessageDialog(this,
+                    "Hubo un error al intentar guardar la configuración.\nCompruebe que el archivo config.properties no esté bloqueado.",
+                    "Error de Escritura", javax.swing.JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
     
     private void cargarTablaUsuarios() {
@@ -289,23 +253,21 @@ public class PanelUsuarios extends javax.swing.JPanel {
         }
     }
     
-    private void btnLimpiarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpiarActionPerformed
+    private void btnLimpiarActionPerformed(java.awt.event.ActionEvent evt) {                                           
         txtUsuario.setText("");
         txtPassword.setText("");
         cmbRol.setSelectedIndex(0);
         tablaUsuarios.clearSelection();
         txtUsuario.requestFocus();
-    }//GEN-LAST:event_btnLimpiarActionPerformed
+    }                                          
 
-    private void txtPasswordKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtPasswordKeyPressed
-
+    private void txtPasswordKeyPressed(java.awt.event.KeyEvent evt) {                                       
         if (evt.getKeyCode() == KeyEvent.VK_ENTER) {
             btnLimpiar.doClick();
         }
-    }//GEN-LAST:event_txtPasswordKeyPressed
+    }                                      
 
-    private void btnEntrar1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEntrar1ActionPerformed
-
+    private void btnEntrar1ActionPerformed(java.awt.event.ActionEvent evt) {                                           
         String usuario = txtUsuario.getText().trim();
         String password = new String(txtPassword.getPassword()); 
         String rol = cmbRol.getSelectedItem().toString();
@@ -317,7 +279,6 @@ public class PanelUsuarios extends javax.swing.JPanel {
 
         dao.UsuarioDAO daoUsuario = new dao.UsuarioDAO();
         
-        // --- ESCUDO DE SEGURIDAD (MENSAJE AMBIGUO) ---
         if (daoUsuario.existeClave(password)) {
             javax.swing.JOptionPane.showMessageDialog(this, 
                 "Por políticas de seguridad del sistema, esta contraseña es considerada vulnerable o no está permitida.\nPor favor, asigne un PIN o contraseña diferente.", 
@@ -326,7 +287,6 @@ public class PanelUsuarios extends javax.swing.JPanel {
             txtPassword.requestFocus();
             return; 
         }
-        // ---------------------------------------------
         
         if (daoUsuario.registrarUsuario(usuario, password, rol)) {
             javax.swing.JOptionPane.showMessageDialog(this, "Usuario registrado exitosamente en el sistema.", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
@@ -340,11 +300,11 @@ public class PanelUsuarios extends javax.swing.JPanel {
         } else {
             javax.swing.JOptionPane.showMessageDialog(this, "Error al registrar. Es posible que este nombre de usuario ya exista.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
-    }//GEN-LAST:event_btnEntrar1ActionPerformed
+    }                                          
 
-    private void btnModificarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnModificarActionPerformed
+    private void btnModificarActionPerformed(java.awt.event.ActionEvent evt) {                                             
        int fila = tablaUsuarios.getSelectedRow();
-        
+       
         if (fila == -1) {
             javax.swing.JOptionPane.showMessageDialog(this, "Seleccione un usuario de la tabla para modificar.", "Aviso", javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
@@ -376,7 +336,6 @@ public class PanelUsuarios extends javax.swing.JPanel {
 
         dao.UsuarioDAO daoUsuario = new dao.UsuarioDAO();
         
-        // --- ESCUDO DE SEGURIDAD (MENSAJE AMBIGUO) ---
         if (!nuevoPassword.isEmpty()) {
             if (daoUsuario.existeClave(nuevoPassword)) {
                 javax.swing.JOptionPane.showMessageDialog(this, 
@@ -387,7 +346,6 @@ public class PanelUsuarios extends javax.swing.JPanel {
                 return; 
             }
         }
-        // ---------------------------------------------
         
         if (daoUsuario.modificarUsuario(idUsuario, nuevoUsuario, nuevoPassword, nuevoRol)) {
             javax.swing.JOptionPane.showMessageDialog(this, "Usuario actualizado correctamente.", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
@@ -399,10 +357,9 @@ public class PanelUsuarios extends javax.swing.JPanel {
         } else {
             javax.swing.JOptionPane.showMessageDialog(this, "Error al actualizar. Verifique que el nombre de usuario no esté repetido.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
-    }//GEN-LAST:event_btnModificarActionPerformed
+    }                                            
 
-    private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
-
+    private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {                                            
         int fila = tablaUsuarios.getSelectedRow();
         
         if (fila == -1) {
@@ -415,7 +372,7 @@ public class PanelUsuarios extends javax.swing.JPanel {
 
         if (idUsuario == 1) {
             javax.swing.JOptionPane.showMessageDialog(this, "¡ALERTA!\nNo puedes eliminar la cuenta del Administrador Principal del sistema por motivos de seguridad.", "Acción Denegada", javax.swing.JOptionPane.ERROR_MESSAGE);
-            return; // Detenemos todo aquí mismo
+            return; 
         }
 
         int confirmacion = javax.swing.JOptionPane.showConfirmDialog(this,
@@ -425,47 +382,44 @@ public class PanelUsuarios extends javax.swing.JPanel {
                 javax.swing.JOptionPane.WARNING_MESSAGE);
 
         if (confirmacion == javax.swing.JOptionPane.YES_OPTION) {
-            
             dao.UsuarioDAO daoUsuario = new dao.UsuarioDAO();
             
             if (daoUsuario.eliminarUsuario(idUsuario)) {
                 javax.swing.JOptionPane.showMessageDialog(this, "Acceso revocado. Usuario eliminado correctamente.", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                cargarTablaUsuarios(); // Refrescamos la tabla al instante
+                cargarTablaUsuarios(); 
             } else {
                 javax.swing.JOptionPane.showMessageDialog(this, "Error al eliminar el usuario.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
             }
         }
-    }//GEN-LAST:event_btnEliminarActionPerformed
+    }                                           
 
-    private void tablaUsuariosMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tablaUsuariosMouseClicked
-
+    private void tablaUsuariosMouseClicked(java.awt.event.MouseEvent evt) {                                           
         int fila = tablaUsuarios.getSelectedRow();
         
         if (fila != -1) {
             txtUsuario.setText(tablaUsuarios.getValueAt(fila, 1).toString());
-            
             cmbRol.setSelectedItem(tablaUsuarios.getValueAt(fila, 2).toString());
-            
             txtPassword.setText(""); 
         }
-    }//GEN-LAST:event_tablaUsuariosMouseClicked
+    }                                          
+
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
+        this.setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 400, Short.MAX_VALUE)
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 300, Short.MAX_VALUE)
+        );
+    }// </editor-fold>//GEN-END:initComponents
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnEliminar;
-    private javax.swing.JButton btnEntrar1;
-    private javax.swing.JButton btnLimpiar;
-    private javax.swing.JButton btnModificar;
-    private javax.swing.JComboBox<String> cmbRol;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JPanel jPanel2;
-    private javax.swing.JPanel jPanel3;
-    private javax.swing.JScrollPane scrollUsuarios;
-    private javax.swing.JTable tablaUsuarios;
-    private javax.swing.JPasswordField txtPassword;
-    private javax.swing.JTextField txtUsuario;
     // End of variables declaration//GEN-END:variables
 }
