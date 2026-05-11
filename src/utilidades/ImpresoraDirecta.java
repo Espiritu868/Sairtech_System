@@ -7,31 +7,27 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.print.PageFormat;
 import java.awt.print.Paper;
 import java.awt.print.Printable;
+import static java.awt.print.Printable.NO_SUCH_PAGE;
+import static java.awt.print.Printable.PAGE_EXISTS;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import javax.print.Doc;
-import javax.print.DocFlavor;
-import javax.print.DocPrintJob;
+import javax.imageio.ImageIO;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
-import javax.print.SimpleDoc;
-import javax.print.attribute.AttributeSet;
-import javax.print.attribute.HashAttributeSet;
-import javax.print.attribute.standard.PrinterName;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
+import java.awt.TrayIcon.MessageType; // <-- IMPORTACIÓN PARA NOTIFICACIONES DE WINDOWS
 
 public class ImpresoraDirecta implements Printable {
 
@@ -39,13 +35,247 @@ public class ImpresoraDirecta implements Printable {
     private String codigoBarras;
     private int totalEtiquetas;
 
-    public boolean imprimirEtiquetasDirecto(String nombreProducto, String codigoBarras, int cantidad) {
-        this.nombreProducto = nombreProducto;
-        this.codigoBarras = codigoBarras;
-        this.totalEtiquetas = cantidad;
+    // =========================================================
+    // LÓGICA INTELIGENTE MEJORADA: RESPETA EL LOGO Y EL CÓDIGO
+    // =========================================================
+    private void dibujarNombreCentradoAjustable(Graphics2D g2d, String texto, double anchoReal) {
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 7)); // Fuente original
+        FontMetrics fm = g2d.getFontMetrics();
+        double maxWidth = anchoReal - 10; // Margen de 5px a los lados
+        
+        List<String> lineas = new ArrayList<>();
+        String[] palabras = texto.split(" ");
+        String lineaActual = "";
+        
+        for (String palabra : palabras) {
+            String prueba = lineaActual.isEmpty() ? palabra : lineaActual + " " + palabra;
+            if (fm.stringWidth(prueba) < maxWidth) {
+                lineaActual = prueba;
+            } else {
+                if (!lineaActual.isEmpty()) lineas.add(lineaActual);
+                lineaActual = palabra;
+            }
+        }
+        if (!lineaActual.isEmpty()) lineas.add(lineaActual);
+        
+        if (lineas.isEmpty()) return;
+        
+        if (lineas.size() == 1) {
+            // CABE EN 1 LÍNEA: La dejamos exactamente en medio, como siempre (y=34)
+            int x = (int)((anchoReal - fm.stringWidth(lineas.get(0))) / 2);
+            g2d.drawString(lineas.get(0), x, 34); 
+            
+        } else {
+            // NO CABE: Usamos 2 líneas, pero sin tocar el logo (y=24) ni el código (y=37)
+            
+            // LÍNEA 1: Arriba, bajamos un poco la y para alejarnos del logo
+            String l1 = lineas.get(0);
+            int x1 = (int)((anchoReal - fm.stringWidth(l1)) / 2);
+            g2d.drawString(l1, x1, 28); // Antes estaba en 26, lo bajamos a 28 para esquivar el logo
 
+            // LÍNEA 2: Abajo, pero si el texto es muy largo, reducimos la letra
+            String l2 = lineas.get(1);
+            
+            // Si hay una 3ra línea perdida por ahí, la ignoramos y le clavamos el "..." a la 2da
+            if (lineas.size() > 2) {
+                while(g2d.getFontMetrics().stringWidth(l2 + "...") > maxWidth && l2.length() > 0) {
+                    l2 = l2.substring(0, l2.length() - 1);
+                }
+                l2 = l2 + "...";
+            }
+            
+            // MAGIA DE TAMAÑO: Hacemos la segunda línea un poquito más pequeña (tamaño 6) 
+            // para que no choque con el código de barras que empieza en y=37
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 6)); 
+            FontMetrics fmPeque = g2d.getFontMetrics();
+            int x2 = (int)((anchoReal - fmPeque.stringWidth(l2)) / 2);
+            g2d.drawString(l2, x2, 35); // Justo un pelito arriba del código de barras
+            
+            // Restauramos la fuente original por si los métodos de abajo la necesitan
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 7)); 
+        }
+    }
+
+    // =========================================================
+    // 1. ETIQUETA INVENTARIO GENERAL (GEMELA DE KNIJICO - 5x3 cm)
+    // =========================================================
+    public boolean imprimirEtiquetasDirecto(String nombreProducto, String codigoBarras, String ubicacion) {
+        PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
+        if (printServices.length == 0) {
+            utilidades.NotificadorWindows.mostrarAlerta("Error de Impresora", "No se detectó ninguna impresora en Windows.", MessageType.ERROR);
+            return false;
+        }
+        
+        String[] nombresImpresoras = new String[printServices.length];
+        for (int i = 0; i < printServices.length; i++) nombresImpresoras[i] = printServices[i].getName();
+
+        JComboBox<String> cmbImpresoras = new JComboBox<>(nombresImpresoras);
+        PrintService defaultService = PrintServiceLookup.lookupDefaultPrintService();
+        if (defaultService != null) cmbImpresoras.setSelectedItem(defaultService.getName());
+
+        JSpinner spinCopias = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1)); 
+        JPanel panelDialogo = new JPanel(new GridLayout(2, 2, 10, 10));
+        panelDialogo.add(new JLabel("Seleccionar Impresora:")); panelDialogo.add(cmbImpresoras);
+        panelDialogo.add(new JLabel("Cantidad de Copias:")); panelDialogo.add(spinCopias);
+
+        if (JOptionPane.showConfirmDialog(null, panelDialogo, "Imprimir Etiqueta - Inventario", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return false; 
+
+        PrintService impresoraSeleccionada = null;
+        for (PrintService ps : printServices) { if (ps.getName().equals(cmbImpresoras.getSelectedItem())) { impresoraSeleccionada = ps; break; } }
+
+        PrinterJob pj = PrinterJob.getPrinterJob();
+        try {
+            if (impresoraSeleccionada != null) pj.setPrintService(impresoraSeleccionada); 
+            pj.setCopies((Integer) spinCopias.getValue()); 
+        } catch (PrinterException e) { return false; }
+        
+        PageFormat pf = pj.defaultPage(); Paper paper = new Paper();
+        
+        // --- TAMAÑO: 5x3 cm EXACTOS ---
+        double width = 142; 
+        double height = 85; 
+        
+        paper.setSize(width, height); 
+        paper.setImageableArea(2, 2, width - 4, height - 4); 
+        pf.setPaper(paper);
+
+        pj.setPrintable(new Printable() {
+            @Override
+            public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
+                if (pageIndex > 0) return NO_SUCH_PAGE;
+                
+                Graphics2D g2d = (Graphics2D) graphics;
+                g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY()); 
+                g2d.setColor(Color.BLACK);
+                double anchoReal = pageFormat.getImageableWidth();
+
+                // 1. LOGO 
+                try {
+                    java.net.URL logoUrl = getClass().getResource("/image/logo_bk.png");
+                    if (logoUrl != null) {
+                        java.awt.Image logo = javax.imageio.ImageIO.read(logoUrl);
+                        g2d.drawImage(logo, 5, 2, 22, 22, null);
+                    } else {
+                        java.io.File fileLocal = new java.io.File("C:\\SairTech_System\\src\\image\\logo_bk.png");
+                        java.io.File fileRed = new java.io.File("\\\\192.168.0.131\\SairTech_System\\src\\image\\logo_bk.png");
+                        if (fileLocal.exists()) g2d.drawImage(javax.imageio.ImageIO.read(fileLocal), 5, 2, 22, 22, null);
+                        else if (fileRed.exists()) g2d.drawImage(javax.imageio.ImageIO.read(fileRed), 5, 2, 22, 22, null);
+                    }
+                } catch (Exception e) {}
+
+                // 2. CÓDIGO (Arriba a la derecha)
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 9)); 
+                int codeWidthTop = g2d.getFontMetrics().stringWidth(codigoBarras);
+                g2d.drawString(codigoBarras, (int)(anchoReal - codeWidthTop - 5), 18);
+
+                // 3. MODELO / DESCRIPCIÓN (MAGIA DE AUTO-AJUSTE)
+                dibujarNombreCentradoAjustable(g2d, nombreProducto, anchoReal);
+
+                // 4. CÓDIGO DE BARRAS (Centro - Intocable)
+                try {
+                    com.itextpdf.text.pdf.Barcode128 barcode = new com.itextpdf.text.pdf.Barcode128(); 
+                    barcode.setCode(codigoBarras); 
+                    barcode.setBarHeight(18f); 
+                    java.awt.Image img = barcode.createAwtImage(Color.BLACK, Color.WHITE);
+                    g2d.drawImage(img, (int) ((anchoReal - 90) / 2), 37, 90, 15, null);
+                } catch (Exception e) {}
+                
+                // 5. CÓDIGO NUMÉRICO
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 6));
+                int codeWidthBot = g2d.getFontMetrics().stringWidth(codigoBarras);
+                g2d.drawString(codigoBarras, (int)((anchoReal - codeWidthBot) / 2), 60);
+
+                // 6. NOTA INVENTARIO
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 6));
+                String nota = "** REPUESTO / ACCESORIO **";
+                g2d.drawString(nota, (int)((anchoReal - g2d.getFontMetrics().stringWidth(nota)) / 2), 69);
+                
+                // 7. UBICACIÓN FÍSICA
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 6));
+                String ubi = "UBICACIÓN: " + (ubicacion.isEmpty() ? "NO ASIGNADA" : ubicacion.toUpperCase());
+                g2d.drawString(ubi, (int)((anchoReal - g2d.getFontMetrics().stringWidth(ubi)) / 2), 78);
+
+                return PAGE_EXISTS;
+            }
+        }, pf);
+        try { pj.print(); return true; } catch (PrinterException e) { return false; }
+    }
+    
+    @Override
+    public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
+        if (pageIndex >= totalEtiquetas) return NO_SUCH_PAGE;
+        Graphics2D g2d = (Graphics2D) graphics;
+        g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+        g2d.setColor(Color.BLACK);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
+        g2d.drawString(nombreProducto, 5, 20);
+        return PAGE_EXISTS;
+    }
+
+    // =========================================================
+    // 2. ETIQUETAS DE INVENTARIO MULTIPLES
+    // =========================================================
+    public boolean imprimirEtiquetasDirecto(String nombreProducto, String codigoBarras, int cantidad, String ubicacion) {
         PrinterJob printerJob = PrinterJob.getPrinterJob();
-        printerJob.setPrintable(this, obtenerFormatoEtiqueta());
+        PageFormat format = new PageFormat();
+        Paper paper = new Paper();
+        
+        double width = 142;  
+        double height = 85;  
+        
+        paper.setSize(width, height);
+        paper.setImageableArea(2, 2, width - 4, height - 4); 
+        format.setPaper(paper);
+
+        printerJob.setPrintable(new Printable() {
+            @Override
+            public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
+                if (pageIndex >= cantidad) return NO_SUCH_PAGE; 
+
+                Graphics2D g2d = (Graphics2D) graphics;
+                g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+                g2d.setColor(Color.BLACK);
+                double anchoReal = pageFormat.getImageableWidth();
+
+                try {
+                    Image logo = null;
+                    File fileLocal = new File("C:\\SairTech_System\\src\\image\\logo_bk.png");
+                    File fileRed = new File("\\\\192.168.0.131\\SairTech_System\\src\\image\\logo_bk.png");
+                    if (fileLocal.exists()) logo = ImageIO.read(fileLocal);
+                    else if (fileRed.exists()) logo = ImageIO.read(fileRed);
+                    if (logo != null) g2d.drawImage(logo, 5, 2, 22, 22, null);
+                } catch (Exception e) {}
+
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 8)); 
+                int codeWidthTop = g2d.getFontMetrics().stringWidth(codigoBarras);
+                g2d.drawString(codigoBarras, (int)(anchoReal - codeWidthTop - 5), 18);
+
+                // MAGIA DE AUTO-AJUSTE
+                dibujarNombreCentradoAjustable(g2d, nombreProducto, anchoReal);
+
+                try {
+                    Barcode128 barcode = new Barcode128(); 
+                    barcode.setCode(codigoBarras); 
+                    barcode.setBarHeight(18f); 
+                    Image img = barcode.createAwtImage(Color.BLACK, Color.WHITE);
+                    g2d.drawImage(img, (int) ((anchoReal - 90) / 2), 37, 90, 15, null);
+                } catch (Exception e) {}
+                
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 6));
+                int codeWidthBot = g2d.getFontMetrics().stringWidth(codigoBarras);
+                g2d.drawString(codigoBarras, (int)((anchoReal - codeWidthBot) / 2), 60);
+
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 5));
+                String nota = "Etiqueta " + (pageIndex + 1) + " de " + cantidad;
+                g2d.drawString(nota, (int)((anchoReal - g2d.getFontMetrics().stringWidth(nota)) / 2), 69);
+                
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 6));
+                String ubi = "UBICACIÓN: " + (ubicacion.isEmpty() ? "NO ASIGNADA" : ubicacion.toUpperCase());
+                g2d.drawString(ubi, (int)((anchoReal - g2d.getFontMetrics().stringWidth(ubi)) / 2), 78);
+
+                return PAGE_EXISTS;
+            }
+        }, format);
 
         if (printerJob.printDialog()) {
             try {
@@ -55,56 +285,99 @@ public class ImpresoraDirecta implements Printable {
         }
         return false; 
     }
-
-    private PageFormat obtenerFormatoEtiqueta() {
-        PageFormat format = new PageFormat();
-        Paper paper = new Paper();
-        double width = 150; 
-        double height = 90; 
-        paper.setSize(width, height);
-        paper.setImageableArea(0, 0, width, height); 
-        format.setPaper(paper);
-        return format;
-    }
-
-    @Override
-    public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
-        if (pageIndex >= totalEtiquetas) return NO_SUCH_PAGE; 
-
-        Graphics2D g2d = (Graphics2D) graphics;
-        g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-
-        g2d.setFont(new Font("SansSerif", Font.BOLD, 10));
-        g2d.setColor(Color.BLACK);
-        String nombreCorto = nombreProducto.length() > 20 ? nombreProducto.substring(0, 20) + "..." : nombreProducto;
-        
-        int stringWidth = g2d.getFontMetrics().stringWidth(nombreCorto);
-        int xCentered = (int) ((pageFormat.getImageableWidth() - stringWidth) / 2);
-        g2d.drawString(nombreCorto, xCentered, 15);
-
-        try {
-            Barcode128 barcode = new Barcode128();
-            barcode.setCode(codigoBarras);
-            barcode.setBarHeight(30f);
-            barcode.setSize(8f);
-            
-            java.awt.Image awtImage = barcode.createAwtImage(Color.BLACK, Color.WHITE);
-            int xBar = (int) ((pageFormat.getImageableWidth() - awtImage.getWidth(null)) / 2);
-            g2d.drawImage(awtImage, xBar, 25, null);
-            
-        } catch (Exception e) { g2d.drawString("Error en código", 10, 40); }
-
-        g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
-        String contador = "Etiqueta " + (pageIndex + 1) + " de " + totalEtiquetas;
-        int countWidth = g2d.getFontMetrics().stringWidth(contador);
-        int xCount = (int) ((pageFormat.getImageableWidth() - countWidth) / 2);
-        g2d.drawString(contador, xCount, 80);
-
-        return PAGE_EXISTS;
-    }
-
+    
     // =========================================================
-    // 1. GENERADOR DE STICKER DEL TÉCNICO (OPTIMIZADO)
+    // 3. ETIQUETAS KNIJICO
+    // =========================================================
+    public boolean imprimirEtiquetaKnijicoDirecta(String modelo, String codigo, String lote, String caja) {
+        PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
+        if (printServices.length == 0) return false;
+        String[] nombresImpresoras = new String[printServices.length];
+        for (int i = 0; i < printServices.length; i++) nombresImpresoras[i] = printServices[i].getName();
+
+        JComboBox<String> cmbImpresoras = new JComboBox<>(nombresImpresoras);
+        PrintService defaultService = PrintServiceLookup.lookupDefaultPrintService();
+        if (defaultService != null) cmbImpresoras.setSelectedItem(defaultService.getName());
+
+        JSpinner spinCopias = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1)); 
+        JPanel panelDialogo = new JPanel(new GridLayout(2, 2, 10, 10));
+        panelDialogo.add(new JLabel("Seleccionar Impresora:")); panelDialogo.add(cmbImpresoras);
+        panelDialogo.add(new JLabel("Cantidad de Copias:")); panelDialogo.add(spinCopias);
+
+        if (JOptionPane.showConfirmDialog(null, panelDialogo, "Impresión Knijico", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return false; 
+
+        PrintService impresoraSeleccionada = null;
+        for (PrintService ps : printServices) { if (ps.getName().equals(cmbImpresoras.getSelectedItem())) { impresoraSeleccionada = ps; break; } }
+
+        PrinterJob pj = PrinterJob.getPrinterJob();
+        try {
+            if (impresoraSeleccionada != null) pj.setPrintService(impresoraSeleccionada); 
+            pj.setCopies((Integer) spinCopias.getValue()); 
+        } catch (PrinterException e) { return false; }
+        
+        PageFormat pf = pj.defaultPage(); Paper paper = new Paper();
+        
+        double width = 142; 
+        double height = 85; 
+        
+        paper.setSize(width, height); 
+        paper.setImageableArea(2, 2, width - 4, height - 4); 
+        pf.setPaper(paper);
+
+        pj.setPrintable(new Printable() {
+            @Override
+            public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
+                if (pageIndex > 0) return NO_SUCH_PAGE;
+                
+                Graphics2D g2d = (Graphics2D) graphics;
+                g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY()); 
+                g2d.setColor(Color.BLACK);
+                double anchoReal = pageFormat.getImageableWidth();
+
+                try {
+                    Image logo = null;
+                    File fileLocal = new File("C:\\SairTech_System\\src\\image\\logo_bk.png");
+                    File fileRed = new File("\\\\192.168.0.131\\SairTech_System\\src\\image\\logo_bk.png");
+                    if (fileLocal.exists()) logo = ImageIO.read(fileLocal);
+                    else if (fileRed.exists()) logo = ImageIO.read(fileRed);
+                    if (logo != null) g2d.drawImage(logo, 5, 2, 22, 22, null);
+                } catch (Exception e) {}
+
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 9)); 
+                int codeWidthTop = g2d.getFontMetrics().stringWidth(codigo);
+                g2d.drawString(codigo, (int)(anchoReal - codeWidthTop - 5), 18);
+
+                // MAGIA DE AUTO-AJUSTE PARA KNIJICO
+                dibujarNombreCentradoAjustable(g2d, modelo, anchoReal);
+
+                try {
+                    Barcode128 barcode = new Barcode128(); 
+                    barcode.setCode(codigo); 
+                    barcode.setBarHeight(18f); 
+                    Image img = barcode.createAwtImage(Color.BLACK, Color.WHITE);
+                    g2d.drawImage(img, (int) ((anchoReal - 90) / 2), 37, 90, 15, null);
+                } catch (Exception e) {}
+                
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 6));
+                int codeWidthBot = g2d.getFontMetrics().stringWidth(codigo);
+                g2d.drawString(codigo, (int)((anchoReal - codeWidthBot) / 2), 60);
+
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 6));
+                String nota = "**Prueba por favor antes de instalar**";
+                g2d.drawString(nota, (int)((anchoReal - g2d.getFontMetrics().stringWidth(nota)) / 2), 69);
+                
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 6));
+                String ubi = "LOTE: " + lote + " | CAJA: " + caja;
+                g2d.drawString(ubi, (int)((anchoReal - g2d.getFontMetrics().stringWidth(ubi)) / 2), 78);
+
+                return PAGE_EXISTS;
+            }
+        }, pf);
+        try { pj.print(); return true; } catch (PrinterException e) { return false; }
+    }
+    
+    // =========================================================
+    // 4. GENERADOR DE STICKER DEL TÉCNICO
     // =========================================================
     public boolean imprimirTicketTecnicoDirecto(String idOrden, String cliente, String equipo, String problema, boolean esCelular, String tecnico, String clave) {
         PrinterJob pj = PrinterJob.getPrinterJob();
@@ -112,12 +385,12 @@ public class ImpresoraDirecta implements Printable {
 
         PageFormat pf = pj.defaultPage();
         Paper paper = new Paper();
-        double width = 160; 
-        // Redujimos el alto para ahorrar papel
-        double height = esCelular ? 170 : 120; 
+        
+        double width = 142;  
+        double height = 85;  
         
         paper.setSize(width, height);
-        paper.setImageableArea(2, 2, width - 4, height - 4);
+        paper.setImageableArea(1, 1, width - 2, height - 2);
         pf.setPaper(paper);
 
         pj.setPrintable(new Printable() {
@@ -129,46 +402,57 @@ public class ImpresoraDirecta implements Printable {
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
                 g2d.setColor(Color.BLACK);
 
-                int y = 6; // Ajuste aquí: Arrancamos casi al ras del papel
-                g2d.setFont(new Font("SansSerif", Font.BOLD, 10));
-                g2d.drawString("ORDEN: " + idOrden, 5, y); 
-                
-                g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
-                g2d.drawString("CLI: " + (cliente.length() > 15 ? cliente.substring(0, 15) : cliente), 75, y); y += 12;
-                
-                g2d.drawString("EQ: " + equipo, 5, y); y += 12;
-                g2d.drawString("TEC: " + tecnico, 5, y); y += 12;
+                int y = 10; 
                 
                 g2d.setFont(new Font("SansSerif", Font.BOLD, 9));
-                g2d.drawString("SEGURIDAD:", 5, y); y += 10;
-                g2d.setFont(new Font("SansSerif", Font.PLAIN, 9));
+                g2d.drawString("ORDEN: " + idOrden, 5, y); 
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
+                g2d.drawString("TEC: " + (tecnico.length() > 10 ? tecnico.substring(0,10) : tecnico), 90, y); 
+                y += 10;
                 
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
+                String cliLimpio = cliente.length() > 28 ? cliente.substring(0, 28) : cliente;
+                g2d.drawString("CLI: " + cliLimpio, 5, y); 
+                y += 10;
+                
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
+                String eqLimpio = equipo.length() > 14 ? equipo.substring(0,14) : equipo; 
+                g2d.drawString("EQ: " + eqLimpio, 5, y); 
+                
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
+                g2d.drawString("CLAVE:", 70, y); 
+                
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
                 if (clave.toLowerCase().contains("patr") || clave.equalsIgnoreCase("p")) {
-                    g2d.drawString("O   O   O", 20, y); y += 10;
-                    g2d.drawString("O   O   O", 20, y); y += 10;
-                    g2d.drawString("O   O   O", 20, y); y += 12;
+                    g2d.setFont(new Font("SansSerif", Font.PLAIN, 6));
+                    g2d.drawString("O O O", 100, y-5); 
+                    g2d.drawString("O O O", 100, y); 
+                    g2d.drawString("O O O", 100, y+5); 
                 } else {
-                    g2d.drawString(clave, 20, y); y += 12;
+                    g2d.setFont(new Font("SansSerif", Font.PLAIN, 8));
+                    g2d.drawString(clave.length() > 10 ? clave.substring(0,10) : clave, 100, y); 
+                }
+                y += 10;
+                
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
+                String fallaLimpia = problema.replace("\n", " ");
+                if (fallaLimpia.length() > 34) {
+                    g2d.drawString("F: " + fallaLimpia.substring(0, 34), 5, y); y += 9;
+                    g2d.drawString("   " + (fallaLimpia.length() > 68 ? fallaLimpia.substring(34, 68) + "..." : fallaLimpia.substring(34)), 5, y); y += 6;
+                } else {
+                    g2d.drawString("F: " + fallaLimpia, 5, y); y += 15;
                 }
                 
-                String problemaCorto = problema.length() > 35 ? problema.substring(0, 35) + "..." : problema;
-                g2d.drawString("F: " + problemaCorto, 5, y); y += 15;
-
                 if (esCelular) {
                     try {
                         Barcode128 barcode = new Barcode128();
                         barcode.setCode(idOrden);
-                        barcode.setBarHeight(20f); // Código de barras un poco más bajo 
-                        java.awt.Image img = barcode.createAwtImage(Color.BLACK, Color.WHITE);
-                        g2d.drawImage(img, 15, y, 120, 20, null); 
-                        y += 28;
+                        barcode.setBarHeight(18f); 
+                        Image img = barcode.createAwtImage(Color.BLACK, Color.WHITE);
+                        g2d.drawImage(img, 21, y, 100, 22, null); 
                     } catch (Exception e) {}
-                    g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
-                    g2d.drawString("NOTAS:___________________", 5, y);
                 } else {
-                    g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
-                    g2d.drawString("TRABAJO/REPUESTOS:", 5, y); y += 12;
-                    g2d.drawString("________________________", 5, y);
+                    g2d.drawString("REPUESTOS: _________________", 5, y + 5);
                 }
 
                 return PAGE_EXISTS;
@@ -177,9 +461,9 @@ public class ImpresoraDirecta implements Printable {
 
         try { pj.print(); return true; } catch (PrinterException e) { return false; }
     }
-    
+
     // =========================================================
-    // 2. GENERADOR DE RECIBOS TÉRMICOS DE VENTA (OPTIMIZADO)
+    // 5. GENERADOR DE RECIBOS TÉRMICOS DE VENTA
     // =========================================================
     public boolean imprimirReciboVenta(int idVenta) {
         String fechaVenta = ""; String cajero = ""; double total = 0.0; String metodoPago = "";
@@ -189,10 +473,10 @@ public class ImpresoraDirecta implements Printable {
         String sqlVenta = "SELECT v.fecha_venta, v.total, v.metodo_pago, u.usuario, v.id_orden FROM ventas v JOIN usuarios u ON v.id_usuario = u.id_usuario WHERE v.id_venta = ?";
         String sqlDetalles = "SELECT cantidad, descripcion, precio_unitario, subtotal FROM detalles_venta WHERE id_venta = ?";
 
-        try (Connection con = new factory.ConexionFactory().getConexion()) {
-            try (PreparedStatement ps = con.prepareStatement(sqlVenta)) {
+        try (java.sql.Connection con = new factory.ConexionFactory().getConexion()) {
+            try (java.sql.PreparedStatement ps = con.prepareStatement(sqlVenta)) {
                 ps.setInt(1, idVenta);
-                try (ResultSet rs = ps.executeQuery()) {
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         fechaVenta = rs.getString("fecha_venta");
                         total = rs.getDouble("total");
@@ -202,9 +486,9 @@ public class ImpresoraDirecta implements Printable {
                     }
                 }
             }
-            try (PreparedStatement ps = con.prepareStatement(sqlDetalles)) {
+            try (java.sql.PreparedStatement ps = con.prepareStatement(sqlDetalles)) {
                 ps.setInt(1, idVenta);
-                try (ResultSet rs = ps.executeQuery()) {
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         detalles.add(new String[]{ rs.getString("cantidad"), rs.getString("descripcion"), rs.getString("precio_unitario"), rs.getString("subtotal") });
                     }
@@ -215,9 +499,9 @@ public class ImpresoraDirecta implements Printable {
         String repEquipo = ""; String repFalla = ""; String repTrabajo = ""; String repCliente = "";
         if (idOrdenVinculada > 0) {
             String sqlRep = "SELECT e.modelo, o.falla_reportada, o.trabajo_realizado, CONCAT(c.nombre, ' ', c.apellido) as cliente FROM ordenes_reparacion o JOIN equipos_registrados e ON o.id_equipo = e.id_equipo JOIN clientes c ON e.id_cliente = c.id_cliente WHERE o.id_orden = ?";
-            try (Connection con = new factory.ConexionFactory().getConexion(); PreparedStatement ps = con.prepareStatement(sqlRep)) {
+            try (java.sql.Connection con = new factory.ConexionFactory().getConexion(); java.sql.PreparedStatement ps = con.prepareStatement(sqlRep)) {
                 ps.setInt(1, idOrdenVinculada);
-                try (ResultSet rs = ps.executeQuery()) {
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         repEquipo = rs.getString("modelo");
                         repFalla = rs.getString("falla_reportada");
@@ -234,7 +518,6 @@ public class ImpresoraDirecta implements Printable {
         Paper paper = new Paper();
 
         double width = 200; 
-        // --- REDUCCIÓN DRÁSTICA DEL LARGO DEL PAPEL ---
         double height = idOrdenVinculada > 0 ? 380 + (detalles.size() * 12) : 230 + (detalles.size() * 12); 
 
         paper.setSize(width, height);
@@ -253,8 +536,8 @@ public class ImpresoraDirecta implements Printable {
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
                 g2d.setColor(Color.BLACK);
 
-                int y = 8;  // Ajuste aquí: Reducido para quitar el espacio en blanco de arriba
-                g2d.setFont(new Font("SansSerif", Font.BOLD, 12)); // Encabezado un poco más pequeño
+                int y = 8;  
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 12)); 
                 centrarTexto(g2d, "SAIRTECH", width, y); y += 12;
                 
                 g2d.setFont(new Font("SansSerif", Font.PLAIN, 7));
@@ -267,7 +550,6 @@ public class ImpresoraDirecta implements Printable {
                 g2d.setFont(new Font("Monospaced", Font.PLAIN, 7));
                 g2d.drawString("Ticket No: " + idVenta + "  |  Fecha: " + fFecha, 5, y); y += 10;
                 
-                // --- SECCIÓN EXCLUSIVA PARA REPARACIONES ---
                 if (fIdOrden > 0) {
                     g2d.drawString("-----------------------------------------", 5, y); y += 10;
                     g2d.setFont(new Font("SansSerif", Font.BOLD, 8));
@@ -301,11 +583,11 @@ public class ImpresoraDirecta implements Printable {
                     if (desc.length() > 22) desc = desc.substring(0, 22) + "..";
                     g2d.drawString(cant + "x", 5, y); g2d.drawString(desc, 25, y); 
                     int subWidth = g2d.getFontMetrics().stringWidth(sub);
-                    g2d.drawString(sub, (int)width - subWidth - 5, y); y += 9; // Interlineado de productos más corto
+                    g2d.drawString(sub, (int)width - subWidth - 5, y); y += 9; 
                 }
 
                 y += 3; g2d.drawString("-----------------------------------------", 5, y); y += 12;
-                g2d.setFont(new Font("SansSerif", Font.BOLD, 10)); // Total destacado pero no gigante
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 10)); 
                 g2d.drawString("TOTAL A PAGAR:", 5, y);
                 String totalStr = String.format("L. %.2f", fTotal);
                 int totWidth = g2d.getFontMetrics().stringWidth(totalStr);
@@ -317,7 +599,7 @@ public class ImpresoraDirecta implements Printable {
 
                 g2d.setFont(new Font("SansSerif", Font.BOLD, 7));
                 centrarTexto(g2d, "PÓLIZA DE GARANTÍA", width, y); y += 10;
-                g2d.setFont(new Font("SansSerif", Font.PLAIN, 6)); // Letra chica para términos legales
+                g2d.setFont(new Font("SansSerif", Font.PLAIN, 6)); 
                 g2d.drawString("1. Válida solo por defectos de fábrica.", 5, y); y += 8;
                 g2d.drawString("2. Se anula por humedad, golpes o", 5, y); y += 8;
                 g2d.drawString("   uso de cargadores genéricos.", 5, y); y += 8;
@@ -341,7 +623,6 @@ public class ImpresoraDirecta implements Printable {
         g2d.drawString(texto, (int) ((width - stringWidth) / 2), y);
     }
     
-    // Función auxiliar para texto multilínea
     private int dibujarTextoMultilinea(Graphics2D g2d, String texto, int x, int y, int maxW) {
         if (texto == null) return y;
         String[] words = texto.split(" ");
@@ -351,7 +632,7 @@ public class ImpresoraDirecta implements Printable {
                 line += word + " ";
             } else {
                 g2d.drawString(line, x, y);
-                y += 8; // Salto de renglón más corto
+                y += 8; 
                 line = word + " ";
             }
         }
@@ -359,110 +640,44 @@ public class ImpresoraDirecta implements Printable {
         return y + 8;
     }
 
-    public boolean imprimirEtiquetaKnijicoDirecta(String modelo, String codigo, String lote, String caja) {
-        PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
-        if (printServices.length == 0) return false;
-        String[] nombresImpresoras = new String[printServices.length];
-        for (int i = 0; i < printServices.length; i++) nombresImpresoras[i] = printServices[i].getName();
-
-        JComboBox<String> cmbImpresoras = new JComboBox<>(nombresImpresoras);
-        PrintService defaultService = PrintServiceLookup.lookupDefaultPrintService();
-        if (defaultService != null) cmbImpresoras.setSelectedItem(defaultService.getName());
-
-        JSpinner spinCopias = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1)); 
-        JPanel panelDialogo = new JPanel(new GridLayout(2, 2, 10, 10));
-        panelDialogo.add(new JLabel("Seleccionar Impresora:")); panelDialogo.add(cmbImpresoras);
-        panelDialogo.add(new JLabel("Cantidad de Copias:")); panelDialogo.add(spinCopias);
-
-        if (JOptionPane.showConfirmDialog(null, panelDialogo, "Impresión Knijico", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return false; 
-
-        PrintService impresoraSeleccionada = null;
-        for (PrintService ps : printServices) { if (ps.getName().equals(cmbImpresoras.getSelectedItem())) { impresoraSeleccionada = ps; break; } }
-
-        PrinterJob pj = PrinterJob.getPrinterJob();
-        try {
-            if (impresoraSeleccionada != null) pj.setPrintService(impresoraSeleccionada); 
-            pj.setCopies((Integer) spinCopias.getValue()); 
-        } catch (PrinterException e) { return false; }
-        
-        PageFormat pf = pj.defaultPage(); Paper paper = new Paper();
-        double width = 160; double height = 90; 
-        paper.setSize(width, height); paper.setImageableArea(2, 2, width - 4, height - 4); pf.setPaper(paper);
-
-        pj.setPrintable(new Printable() {
-            @Override
-            public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
-                if (pageIndex > 0) return NO_SUCH_PAGE;
-                Graphics2D g2d = (Graphics2D) graphics;
-                g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY()); g2d.setColor(Color.BLACK);
-                double anchoReal = pageFormat.getImageableWidth();
-
-                g2d.setFont(new Font("SansSerif", Font.PLAIN, 7)); FontMetrics fm = g2d.getFontMetrics();
-                String titulo = "SAIRTECH - KNIJICO"; g2d.drawString(titulo, (int) ((anchoReal - fm.stringWidth(titulo)) / 2), 10);
-                g2d.setFont(new Font("SansSerif", Font.BOLD, 8)); fm = g2d.getFontMetrics();
-                int xMod = (int) ((anchoReal - fm.stringWidth(modelo)) / 2); g2d.drawString(modelo, xMod < 0 ? 0 : xMod, 22);
-                try {
-                    Barcode128 barcode = new Barcode128(); barcode.setCode(codigo); barcode.setBarHeight(25f); 
-                    java.awt.Image img = barcode.createAwtImage(Color.BLACK, Color.WHITE);
-                    g2d.drawImage(img, (int) ((anchoReal - 130) / 2), 28, 130, 35, null);
-                } catch (Exception e) {}
-                g2d.setFont(new Font("SansSerif", Font.PLAIN, 7)); fm = g2d.getFontMetrics();
-                String ubi = lote + " - CAJA: " + caja; g2d.drawString(ubi, (int) ((anchoReal - fm.stringWidth(ubi)) / 2), 75);
-                return PAGE_EXISTS;
-            }
-        }, pf);
-        try { pj.print(); return true; } catch (PrinterException e) { return false; }
-    }
-    
-    // --- MÉTODO PARA IMPRIMIR PÓLIZA DE GARANTÍA (CON VENTANA NATIVA DE WINDOWS) ---
+    // --- MÉTODO PARA IMPRIMIR PÓLIZA DE GARANTÍA ---
     public void imprimirPolizaGarantia(String ticket, String fecha, String vence, String cliente, String tel, String equipo, String imei, int dias, String cat) {
         try {
-            // 1. Obtener todas las impresoras instaladas y la impresora por defecto
             javax.print.PrintService[] printServices = javax.print.PrintServiceLookup.lookupPrintServices(null, null);
             javax.print.PrintService defaultService = javax.print.PrintServiceLookup.lookupDefaultPrintService();
             
             if (printServices.length == 0) {
-                javax.swing.JOptionPane.showMessageDialog(null, "No se encontraron impresoras instaladas en el sistema.", "Error de Impresora", javax.swing.JOptionPane.ERROR_MESSAGE);
+                utilidades.NotificadorWindows.mostrarAlerta("Error", "No se encontraron impresoras instaladas en el sistema.", MessageType.ERROR);
                 return;
             }
 
-            // 2. Crear los atributos de impresión vacíos (obligatorio para la ventana nativa)
             javax.print.attribute.PrintRequestAttributeSet attributes = new javax.print.attribute.HashPrintRequestAttributeSet();
 
-            // 3. INVOCAR LA VENTANA NATIVA DE IMPRESIÓN (La de tu foto)
             javax.print.PrintService selectedService = javax.print.ServiceUI.printDialog(
-                    null, // Frame padre
-                    200, 200, // Coordenadas donde aparecerá la ventana en pantalla
-                    printServices, // Lista de impresoras
-                    defaultService, // Impresora seleccionada por defecto
-                    null, // Flavor (nulo para que muestre todas)
-                    attributes // Atributos
+                    null, 200, 200, printServices, defaultService, null, attributes 
             );
 
-            // Si el usuario presiona "Cancel" o cierra la ventana, la variable llega nula y abortamos.
             if (selectedService == null) {
                 return;
             }
 
-            // 4. Preparar el trabajo de impresión con la impresora que eligió en la ventana
             javax.print.DocPrintJob job = selectedService.createPrintJob();
             
-            // Formateo de texto (32 caracteres max para 58mm)
             StringBuilder sb = new StringBuilder();
-            sb.append((char)27 + "a" + (char)1); // Centrado
-            sb.append((char)27 + "!" + (char)32); // Doble altura y negrita
+            sb.append((char)27 + "a" + (char)1); 
+            sb.append((char)27 + "!" + (char)32); 
             sb.append("SAIRTECH\n");
-            sb.append((char)27 + "!" + (char)1); // Texto normal
+            sb.append((char)27 + "!" + (char)1); 
             sb.append("TECNOLOGIA Y REPARACION\n");
             sb.append("Tel: 9988-3561\n");
             sb.append("Trinidad, Santa Barbara\n");
             sb.append("================================\n");
-            sb.append((char)27 + "!" + (char)8); // Negrita
+            sb.append((char)27 + "!" + (char)8); 
             sb.append("POLIZA DE GARANTIA\n");
-            sb.append((char)27 + "!" + (char)1); // Normal
+            sb.append((char)27 + "!" + (char)1); 
             sb.append("================================\n\n");
             
-            sb.append((char)27 + "a" + (char)0); // Alineado a la izquierda
+            sb.append((char)27 + "a" + (char)0); 
             sb.append("Recibo: #").append(ticket).append("\n");
             sb.append("F. Compra: ").append(fecha).append("\n");
             sb.append("F. Vence:  ").append(vence).append("\n");
@@ -485,20 +700,130 @@ public class ImpresoraDirecta implements Printable {
             sb.append("4. Garantia NULA por golpes o\n");
             sb.append("humedad (mojado).\n\n");
             
-            sb.append((char)27 + "a" + (char)1); // Centrado
+            sb.append((char)27 + "a" + (char)1); 
             sb.append("\n      __________________\n");
             sb.append("        Firma Cliente\n\n\n\n\n");
             
-            sb.append((char)29 + "V" + (char)66 + (char)0); // Corte de papel
+            sb.append((char)29 + "V" + (char)66 + (char)0); 
 
-            // Mandar a imprimir usando el encoding clásico para POS
             byte[] bytes = sb.toString().getBytes("CP437");
             javax.print.Doc doc = new javax.print.SimpleDoc(bytes, javax.print.DocFlavor.BYTE_ARRAY.AUTOSENSE, null);
             job.print(doc, null);
 
         } catch (Exception e) {
-            System.err.println("Error impresora: " + e.getMessage());
-            javax.swing.JOptionPane.showMessageDialog(null, "Hubo un error de comunicación con la impresora:\n" + e.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+            utilidades.NotificadorWindows.mostrarAlerta("Error de Impresora", "Fallo de comunicación: " + e.getMessage(), MessageType.ERROR);
         }
+    }
+    
+    // =========================================================
+    // VISTA PREVIA EN PANTALLA PROFESIONAL (ESTILIZADA)
+    // =========================================================
+    public void previsualizarEtiqueta(String nombreProducto, String codigoBarras, String ubicacion) {
+        // --- 1. GENERACIÓN DE LA IMAGEN (Igual que antes) ---
+        int width = 142; // 5cm
+        int height = 85; // 3cm
+        int scale = 4;   // Zoom x4
+
+        java.awt.image.BufferedImage bImage = new java.awt.image.BufferedImage(width * scale, height * scale, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = bImage.createGraphics();
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.scale(scale, scale);
+
+        // Fondo blanco (papel)
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, width, height);
+        g2d.setColor(Color.BLACK);
+        
+        double anchoReal = width;
+
+        // DIBUJO DE LA ETIQUETA (Llama a tu método optimizado que no pisa el logo)
+        // 1. Logo
+        try {
+            java.net.URL logoUrl = getClass().getResource("/image/logo_bk.png");
+            if (logoUrl != null) g2d.drawImage(javax.imageio.ImageIO.read(logoUrl), 5, 2, 22, 22, null);
+        } catch (Exception e) {}
+        // 2. Código arriba
+        g2d.setFont(new Font("SansSerif", Font.PLAIN, 9)); 
+        g2d.drawString(codigoBarras, (int)(anchoReal - g2d.getFontMetrics().stringWidth(codigoBarras) - 5), 18);
+        // 3. Nombre (AUTO-AJUSTABLE)
+        dibujarNombreCentradoAjustable(g2d, nombreProducto, anchoReal);
+        // 4. Barras
+        try {
+            com.itextpdf.text.pdf.Barcode128 barcode = new com.itextpdf.text.pdf.Barcode128(); 
+            barcode.setCode(codigoBarras); barcode.setBarHeight(18f); 
+            g2d.drawImage(barcode.createAwtImage(Color.BLACK, Color.WHITE), (int) ((anchoReal - 90) / 2), 37, 90, 15, null);
+        } catch (Exception e) {}
+        // 5. Números abajo
+        g2d.setFont(new Font("SansSerif", Font.PLAIN, 6));
+        g2d.drawString(codigoBarras, (int)((anchoReal - g2d.getFontMetrics().stringWidth(codigoBarras)) / 2), 60);
+        // 6. Nota
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 6));
+        String nota = "** REPUESTO / ACCESORIO **";
+        g2d.drawString(nota, (int)((anchoReal - g2d.getFontMetrics().stringWidth(nota)) / 2), 69);
+        // 7. Ubicación
+        g2d.setFont(new Font("SansSerif", Font.PLAIN, 6));
+        String ubi = "UBICACIÓN: " + (ubicacion.isEmpty() ? "NO ASIGNADA" : ubicacion.toUpperCase());
+        g2d.drawString(ubi, (int)((anchoReal - g2d.getFontMetrics().stringWidth(ubi)) / 2), 78);
+
+        g2d.dispose();
+
+
+        // --- 2. CREACIÓN DE LA VENTANA DE PREVIA ESTILIZADA (JDialog) ---
+        
+        // Buscamos la ventana principal para que sea modal sobre ella
+        java.awt.Window parentWindow = javax.swing.FocusManager.getCurrentManager().getActiveWindow();
+        final javax.swing.JDialog dialogo = new javax.swing.JDialog(parentWindow, "Previsualización Exacta de Etiqueta (5x3 cm)", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        dialogo.setLayout(new java.awt.BorderLayout());
+        dialogo.setResizable(false);
+        
+        // Ícono de la ventana (usamos el logo del sistema)
+        try {
+            java.net.URL logoUrl = getClass().getResource("/image/logo_bk.png");
+            if (logoUrl != null) dialogo.setIconImage(javax.imageio.ImageIO.read(logoUrl));
+        } catch (Exception e) {}
+
+        // --- PANEL CENTRAL (Fondo de contraste y Sticker) ---
+        // Usamos un gris claro de fondo para que el sticker blanco resalte mucho más
+        JPanel panelContenedor = new JPanel(new java.awt.GridBagLayout()); 
+        panelContenedor.setBackground(new Color(236, 240, 241)); // Gris "Clouds" plano
+        panelContenedor.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 30, 30, 30)); // Margen interno
+
+        // El JLabel que sostiene la imagen del sticker
+        javax.swing.JLabel lblSticker = new javax.swing.JLabel(new javax.swing.ImageIcon(bImage));
+        
+        // Le ponemos un borde compuesto: una línea gris fina y una sombra suave
+        lblSticker.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createLineBorder(new Color(189, 195, 199), 1), // Línea gris
+            javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1) // Pequeño aire interno blanco
+        ));
+        
+        // Usamos GridBagLayout para centrar el sticker perfecto en el panel gris
+        panelContenedor.add(lblSticker, new java.awt.GridBagConstraints());
+
+        // --- PANEL INFERIOR (Botón Cerrar) ---
+        JPanel panelBotones = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER));
+        panelBotones.setOpaque(false); // Transparente para ver el fondo gris
+        panelBotones.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 20, 0)); // Aire arriba del botón
+
+        javax.swing.JButton btnCerrar = new javax.swing.JButton("Cerrar Vista Previa");
+        // Estilo del botón (Gris oscuro, letra blanca, Segoe UI BOLD)
+        btnCerrar.setBackground(new Color(44, 62, 80)); 
+        btnCerrar.setForeground(Color.WHITE);
+        btnCerrar.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnCerrar.setPreferredSize(new java.awt.Dimension(250, 40));
+        btnCerrar.setFocusPainted(false);
+        btnCerrar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        
+        btnCerrar.addActionListener(e -> dialogo.dispose()); // Cierra la ventana
+        panelBotones.add(btnCerrar);
+
+        // Armamos la ventana
+        dialogo.add(panelContenedor, java.awt.BorderLayout.CENTER);
+        dialogo.add(panelBotones, java.awt.BorderLayout.SOUTH);
+
+        // Ajustar tamaño automáticamente al contenido y centrar en pantalla
+        dialogo.pack();
+        dialogo.setLocationRelativeTo(parentWindow);
+        dialogo.setVisible(true); // Se queda esperando aquí hasta que cierren la previa
     }
 }

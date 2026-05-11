@@ -16,10 +16,19 @@ public class HistorialDAO {
         this.factory = new ConexionFactory();
     }
 
-    public List<Expediente> buscarExpedienteCompleto(String textoBusqueda) {
+    public List<Expediente> buscarExpedienteCompleto(String textoBusqueda, String filtroEstado, boolean verPapelera) {
         List<Expediente> lista = new ArrayList<>();
         
-        // --- CONSULTA EXACTA BASADA EN TU SQL DUMP ---
+        // 1. CORRECCIÓN: Manejo de la Papelera usando la columna 'eliminado' (1 = Papelera, 0 = Activo)
+        String condicionPapelera = verPapelera ? "o.eliminado = 1" : "o.eliminado = 0";
+        
+        // 2. Manejo del Filtro de Estado ("Todos" no filtra)
+        String condicionEstado = "";
+        if (!filtroEstado.equals("Todos")) {
+            condicionEstado = " AND o.estado = '" + filtroEstado + "' ";
+        }
+
+        // 3. CONSULTA CON 'eliminado' INCLUIDO EN EL WHERE
         String sql = "SELECT " +
                      "o.id_orden, " +
                      "o.fecha_ingreso, " +
@@ -31,21 +40,30 @@ public class HistorialDAO {
                      "o.problema_reportado, " + 
                      "o.trabajo_realizado, " + 
                      "o.costo, " + 
-                     "u.usuario AS tecnico_entrega " + // <--- AQUÍ ESTABA EL ERROR FINAL. Tu columna se llama 'usuario'.
+                     "u.usuario AS tecnico_entrega " + 
                      "FROM ordenes_reparacion o " +
                      "LEFT JOIN equipos_registrados e ON o.id_equipo = e.id_equipo " +
                      "LEFT JOIN clientes c ON e.id_cliente = c.id_cliente " +
                      "LEFT JOIN usuarios u ON o.id_usuario_entrega = u.id_usuario " +
-                     "WHERE e.modelo LIKE ? OR CONCAT(c.nombre, ' ', c.apellido) LIKE ? OR o.id_orden LIKE ? " +
-                     "ORDER BY o.id_orden DESC";
+                     "WHERE (" + condicionPapelera + ")" + condicionEstado;
+
+        // 4. Inyección dinámica del texto de búsqueda
+        if (textoBusqueda != null && !textoBusqueda.trim().isEmpty()) {
+            sql += " AND (e.modelo LIKE ? OR CONCAT(c.nombre, ' ', c.apellido) LIKE ? OR o.id_orden LIKE ?)";
+        }
+        
+        // 5. Ordenamos por el más reciente
+        sql += " ORDER BY o.id_orden DESC";
 
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
              
-            String param = "%" + textoBusqueda + "%";
-            ps.setString(1, param);
-            ps.setString(2, param);
-            ps.setString(3, param); 
+            if (textoBusqueda != null && !textoBusqueda.trim().isEmpty()) {
+                String param = "%" + textoBusqueda.trim() + "%";
+                ps.setString(1, param);
+                ps.setString(2, param);
+                ps.setString(3, param); 
+            }
             
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -66,7 +84,7 @@ public class HistorialDAO {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error al buscar el historial maestro: " + e.getMessage());
+            System.err.println("Error al buscar el historial maestro unificado: " + e.getMessage());
         }
         return lista;
     }

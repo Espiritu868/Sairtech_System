@@ -16,7 +16,7 @@ public class PanelKnijico extends JPanel {
     private KnijicoDAO dao;
     private int idPantallaSeleccionada = -1;
 
-    private JTextField txtNuevoLote;
+    private JSpinner spnNuevoLote;
     private JComboBox<ComboItem> cmbFiltroLote;
     private JTable tablaInventario;
     private DefaultTableModel modeloTabla;
@@ -71,18 +71,35 @@ public class PanelKnijico extends JPanel {
         lblTit.setForeground(COLOR_NARANJA);
         panel.add(lblTit, gbc);
 
-        gbc.gridy++; panel.add(new JLabel("Nombre del Lote (Ej: Lote 1):"), gbc);
-        txtNuevoLote = new JTextField(); txtNuevoLote.setPreferredSize(new Dimension(0, 35));
-        gbc.gridy++; panel.add(txtNuevoLote, gbc);
+        gbc.gridy++; panel.add(new JLabel("Número de Lote:"), gbc);
+        
+        // REEMPLAZO POR JSPINNER
+        spnNuevoLote = new JSpinner(new SpinnerNumberModel(1, 1, 9999, 1));
+        spnNuevoLote.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        spnNuevoLote.setPreferredSize(new Dimension(0, 35));
+        gbc.gridy++; panel.add(spnNuevoLote, gbc);
 
-        JButton btnCrear = new JButton("Crear Lote");
+        // BOTONES DE ACCIÓN
+        JButton btnCrear = new JButton("Crear");
         btnCrear.setBackground(COLOR_NARANJA); btnCrear.setForeground(Color.WHITE);
         btnCrear.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnCrear.setFocusPainted(false);
         btnCrear.addActionListener(e -> crearLote());
-        gbc.gridy++; gbc.insets = new Insets(10, 0, 30, 0); panel.add(btnCrear, gbc);
+        
+        JButton btnEditar = new JButton("Editar");
+        btnEditar.setBackground(COLOR_AZUL); btnEditar.setForeground(Color.WHITE);
+        btnEditar.setFont(new Font("Segoe UI", Font.BOLD, 14)); btnEditar.setFocusPainted(false);
+        btnEditar.setToolTipText("Edita el lote seleccionado en el filtro de abajo");
+        btnEditar.addActionListener(e -> editarLote());
+
+        JPanel pnlBotonesLote = new JPanel(new GridLayout(1, 2, 5, 0));
+        pnlBotonesLote.setOpaque(false);
+        pnlBotonesLote.add(btnCrear);
+        pnlBotonesLote.add(btnEditar);
+
+        gbc.gridy++; gbc.insets = new Insets(10, 0, 30, 0); panel.add(pnlBotonesLote, gbc);
 
         gbc.gridy++; gbc.insets = new Insets(10, 0, 5, 0);
-        panel.add(new JLabel("Filtrar Tabla por Lote:"), gbc);
+        panel.add(new JLabel("Filtrar / Editar Lote:"), gbc);
         cmbFiltroLote = new JComboBox<>(); cmbFiltroLote.setPreferredSize(new Dimension(0, 35));
         cmbFiltroLote.addActionListener(e -> refrescarTabla());
         gbc.gridy++; panel.add(cmbFiltroLote, gbc);
@@ -223,11 +240,18 @@ public class PanelKnijico extends JPanel {
         btnKardexKnijico.setEnabled(false); // Apagado hasta seleccionar
         
         btnKardexKnijico.addActionListener(e -> {
-            if (idPantallaSeleccionada != -1) {
-                // Sumamos 70000 para que el KardexDAO sepa que es de Knijico
-                new gui.JDialogVisualizarKardex(idPantallaSeleccionada + 70000).setVisible(true);
-            }
-        });
+    if (idPantallaSeleccionada != -1) {
+        // 1. Obtenemos la fila seleccionada de tu tabla de Knijico
+        // (Cambia 'tablaKnijico' por el nombre real que tenga tu JTable de pantallas)
+        int fila = tablaInventario.getSelectedRow(); 
+        
+        // 2. Extraemos el modelo/nombre de la pantalla (ajusta el número '1' a la columna correcta)
+        String modeloPantalla = tablaInventario.getValueAt(fila, 2).toString();
+
+        // 3. Sumamos 70000 y le pasamos el nombre con un distintivo visual
+        new gui.JDialogVisualizarKardex(idPantallaSeleccionada + 70000, " " + modeloPantalla).setVisible(true);
+    }
+});
 
         gbc.gridy++; gbc.insets = new Insets(15, 0, 0, 0); panel.add(btnGuardar, gbc);
         
@@ -371,13 +395,71 @@ public class PanelKnijico extends JPanel {
     }
 
     private void crearLote() {
-        String nombre = txtNuevoLote.getText().trim();
-        if (nombre.isEmpty()) return;
-        if (dao.crearLote(nombre)) {
-            JOptionPane.showMessageDialog(this, "Lote creado."); txtNuevoLote.setText(""); refrescarLotes();
+        int numero = (int) spnNuevoLote.getValue();
+        String nombreFinal = "Lote " + numero;
+
+        if (dao.existeLote(nombreFinal)) {
+            JOptionPane.showMessageDialog(this, "El " + nombreFinal + " ya está registrado en el sistema.", "Lote Duplicado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (dao.crearLote(nombreFinal)) {
+            JOptionPane.showMessageDialog(this, nombreFinal + " creado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            spnNuevoLote.setValue(1); // Resetea el spinner
+            refrescarLotes();
+        } else {
+            JOptionPane.showMessageDialog(this, "Error al crear el lote en la base de datos.", "Error Crítico", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    private void editarLote() {
+        ComboItem loteSeleccionado = (ComboItem) cmbFiltroLote.getSelectedItem();
+        
+        // Validamos que haya seleccionado un lote real y no "Todos los Lotes"
+        if (loteSeleccionado == null || loteSeleccionado.getId() == 0) {
+            JOptionPane.showMessageDialog(this, "Por favor, seleccione un lote específico en el filtro de abajo para editarlo.", "Selección Requerida", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String nombreActual = loteSeleccionado.toString();
+        
+        // Creamos otro spinner para el popup de edición
+        JSpinner spnEditar = new JSpinner(new SpinnerNumberModel(1, 1, 9999, 1));
+        spnEditar.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        
+        // Intentamos extraer el número actual para que el spinner lo muestre por defecto
+        try {
+            String numActual = nombreActual.replace("Lote ", "").trim();
+            spnEditar.setValue(Integer.parseInt(numActual));
+        } catch (Exception e) {}
+
+        Object[] mensaje = {
+            "Editando: " + nombreActual,
+            "Ingrese el número correcto para este lote:", spnEditar
+        };
+
+        int opcion = JOptionPane.showConfirmDialog(this, mensaje, "Corregir Lote", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        
+        if (opcion == JOptionPane.OK_OPTION) {
+            int nuevoNum = (int) spnEditar.getValue();
+            String nombreFinal = "Lote " + nuevoNum;
+
+            if (nombreFinal.equals(nombreActual)) return; // Si no cambió nada, salimos
+
+            if (dao.existeLote(nombreFinal)) {
+                JOptionPane.showMessageDialog(this, "No puede cambiarlo a " + nombreFinal + " porque ese lote ya existe.", "Duplicado", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (dao.actualizarNombreLote(loteSeleccionado.getId(), nombreFinal)) {
+                JOptionPane.showMessageDialog(this, "Lote corregido exitosamente a " + nombreFinal, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                refrescarLotes();
+                refrescarTabla();
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al actualizar en base de datos.", "Error Crítico", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
     private void imprimirEtiquetaCodigo() {
         if (idPantallaSeleccionada == -1) return;
         
@@ -397,9 +479,15 @@ public class PanelKnijico extends JPanel {
         boolean ok = impresora.imprimirEtiquetaKnijicoDirecta(modelo, codigo, lote, caja);
         
         if (ok) {
-            JOptionPane.showMessageDialog(this, "Etiqueta enviada a la impresora.", "Impresión Exitosa", JOptionPane.INFORMATION_MESSAGE);
+            // ¡MAGIA! Reemplazamos el molesto JOptionPane por la notificación nativa
+            utilidades.NotificadorWindows.mostrarAlerta(
+                "Impresión Exitosa", 
+                "La etiqueta del " + modelo + " se envió a la impresora.", 
+                java.awt.TrayIcon.MessageType.INFO
+            );
         } else {
-            JOptionPane.showMessageDialog(this, "No se pudo comunicar con la impresora.", "Error de Impresión", JOptionPane.ERROR_MESSAGE);
+            // Los errores SIEMPRE deben ser JOptionPane para forzar al usuario a leerlos
+            JOptionPane.showMessageDialog(this, "No se pudo comunicar con la impresora o se canceló el proceso.", "Aviso de Impresión", JOptionPane.WARNING_MESSAGE);
         }
     }
 

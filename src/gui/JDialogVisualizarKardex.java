@@ -17,11 +17,15 @@ import javax.swing.table.DefaultTableModel;
 public class JDialogVisualizarKardex extends JDialog {
 
     private int idProducto;
+    private String nombreProducto; // <--- NUEVA VARIABLE
     private JTable tablaKardex;
     private DefaultTableModel modeloKardex;
 
-    public JDialogVisualizarKardex(int idProducto) {
+    // --- CONSTRUCTOR MODIFICADO ---
+    public JDialogVisualizarKardex(int idProducto, String nombreProducto) {
         this.idProducto = idProducto;
+        this.nombreProducto = nombreProducto; // Guardamos el nombre
+        
         setModal(true); 
         setSize(900, 600); 
         setTitle("Movimientos del Kardex");
@@ -34,7 +38,8 @@ public class JDialogVisualizarKardex extends JDialog {
         JPanel panelCabecera = new JPanel(new BorderLayout());
         panelCabecera.setOpaque(false);
         
-        JLabel lblTitulo = new JLabel("Lista De Movimientos Kardex");
+        // --- AQUÍ APLICAMOS EL CAMBIO DE TÍTULO SOLICITADO ---
+        JLabel lblTitulo = new JLabel("KARDEX(" + idProducto + ", " + nombreProducto + ")");
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 18));
         lblTitulo.setForeground(new Color(44, 62, 80));
         panelCabecera.add(lblTitulo, BorderLayout.WEST);
@@ -49,14 +54,10 @@ public class JDialogVisualizarKardex extends JDialog {
         btnAgregarAjuste.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btnAgregarAjuste.setToolTipText("Añadir un ajuste manual de inventario");
         
-        // --- LA SOLUCIÓN AL REFRESCO INSTANTÁNEO ---
         btnAgregarAjuste.addActionListener(e -> {
             gui.JDialogAjusteManualKardex modalAjuste = new gui.JDialogAjusteManualKardex(this.idProducto);
-            // Esto obliga a Java a pausar el código hasta que el técnico cierre la ventanita
             modalAjuste.setModal(true); 
             modalAjuste.setVisible(true);
-            
-            // Cuando la ventana se cierra, Java continúa aquí y refresca la tabla al instante
             cargarDatosKardex(""); 
         });
         
@@ -67,7 +68,6 @@ public class JDialogVisualizarKardex extends JDialog {
         
         panelContenedor.add(panelCabecera, BorderLayout.NORTH);
         
-        // --- TABLA SIN LA COLUMNA DE COSTO ---
         String[] columnas = {"Código", "Fecha Movimiento", "Descripción / Acción", "Cant.", "Saldo", "Usuario"};
         modeloKardex = new DefaultTableModel(columnas, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -111,7 +111,6 @@ public class JDialogVisualizarKardex extends JDialog {
             modeloKardex.addRow(new Object[]{fila[0], fila[1], fila[2], fila[3], fila[4], fila[6]});
         }
         
-        // Pinta de rojo si es negativo y verde si es positivo (Columna Cantidad)
         tablaKardex.getColumnModel().getColumn(3).setCellRenderer(new javax.swing.table.DefaultTableCellRenderer() {
             @Override
             public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {

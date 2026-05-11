@@ -290,7 +290,7 @@ public class PanelPuntoVenta extends JPanel {
         JPanel panelCobro = new JPanel(new BorderLayout(20, 0)); panelCobro.setBackground(Color.WHITE);
         panelCobro.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(220, 220, 220)), BorderFactory.createEmptyBorder(15, 20, 15, 20)));
 
-        lblTotalGlobal = new JLabel("TOTAL: L. 0.00"); lblTotalGlobal.setFont(new Font("Segoe UI", Font.BOLD, 32)); 
+        lblTotalGlobal = new JLabel("TOTAL: L. 0.00"); lblTotalGlobal.setFont(new Font("Segoe UI", Font.BOLD, 24)); 
         lblTotalGlobal.setForeground(new Color(46, 204, 113)); panelCobro.add(lblTotalGlobal, BorderLayout.WEST);
 
         JPanel panelAccionesCobro = new JPanel(new GridBagLayout()); panelAccionesCobro.setOpaque(false);
@@ -810,11 +810,11 @@ public class PanelPuntoVenta extends JPanel {
             String descripcionItem = modeloCarrito.getValueAt(i, 1).toString();
             
             if (idCarrito >= 70000) {
-                dv.setIdProducto(idCarrito - 70000); 
+                // Dejamos el ID virtual intacto para que VentaDAO sepa que es Knijico
+                dv.setIdProducto(idCarrito); 
             } else {
                 dv.setIdProducto(idCarrito); 
             }
-            
             dv.setDescripcion(descripcionItem);
             dv.setCantidad(Integer.parseInt(modeloCarrito.getValueAt(i, 2).toString()));
             dv.setPrecioUnitario(Double.parseDouble(modeloCarrito.getValueAt(i, 3).toString()));

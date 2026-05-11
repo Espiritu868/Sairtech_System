@@ -21,10 +21,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent evt) {
-                setCursor(new java.awt.Cursor(java.awt.Cursor.WAIT_CURSOR));
-                
-                utilidades.BackupAutomatico.realizarRespaldoSilencioso("CIERRE");
-                
+                // Quitamos el respaldo de "CIERRE" para que no moleste al salir
                 System.exit(0);
             }
         });
@@ -35,8 +32,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         mostrarPanel(login);
         new dao.UsuarioDAO().inicializarAdministradorDefecto();
         
-        // 3. ACTUALIZAMOS LA LLAMADA DE ARRANQUE PARA QUE DIGA "INICIO"
-        new Thread(() -> utilidades.BackupAutomatico.realizarRespaldoSilencioso("INICIO")).start();
+        // --- ARRANQUE DEL PROGRAMADOR ---
+        new Thread(() -> {
+            // Eliminamos la línea de "INICIO" que hacía el backup al abrir.
+            
+            // MANTENEMOS esta línea: es la que enciende el reloj para 
+            // que el sistema revise la hora cada minuto y haga los backups de ley.
+            utilidades.BackupAutomatico.iniciarProgramadorRespaldo();
+        }).start();
     }
     
     public void habilitarSistema(String rol, String nombreUsuario) { 
@@ -69,7 +72,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         }
     }
     
-    private void mostrarPanel(javax.swing.JPanel p) {
+    public void mostrarPanel(javax.swing.JPanel p) {
         p.setSize(panelContenedor.getWidth(), panelContenedor.getHeight());
         p.setLocation(0,0);
         
@@ -81,10 +84,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }
     
     private void seleccionarBotonMenu(javax.swing.JButton botonActivo) {
+        // --- SE AGREGÓ btnBancoDespiece AL ARREGLO DE BOTONES ---
         javax.swing.JButton[] todosLosBotones = {
-            btnIngresoEquipos, btnControlOrdenes, btnEntregaEquipos, 
+            btnIngresoEquipos, btnControlOrdenes, btnEntregaEquipos, btnBancoDespiece, 
             btnPuntoVenta, btnInventario, btnProveedores, btnHistorialVentas, 
-            btnClientes, btnHistorialEquipos, btnHistorialGarantias, // <--- AQUI ESTÁ EL NUEVO
+            btnClientes, btnHistorialEquipos, btnHistorialGarantias,
             btnDashboard, btnGestionUsuarios,
             btnPanelKnijico
         };
@@ -97,7 +101,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             botonActivo.setEnabled(false);
         }
     }
-
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -182,6 +185,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
     // --- VARIABLES DEL NUEVO MENÚ COLAPSABLE ---
     private javax.swing.JButton btnIngresoEquipos;
+    private javax.swing.JButton btnBancoDespiece; // <--- NUEVO BOTON PARA HUESERA
     private javax.swing.JButton btnControlOrdenes;
     private javax.swing.JButton btnEntregaEquipos;
     private javax.swing.JButton btnPuntoVenta;
@@ -190,7 +194,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JButton btnHistorialVentas;
     private javax.swing.JButton btnClientes;
     private javax.swing.JButton btnHistorialEquipos;
-    private javax.swing.JButton btnHistorialGarantias; // <--- VARIABLE AGREGADA
+    private javax.swing.JButton btnHistorialGarantias; 
     private javax.swing.JButton btnPanelKnijico;
     private javax.swing.JButton btnDashboard;
     private javax.swing.JButton btnGestionUsuarios;
@@ -234,15 +238,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         panelMenu.add(lblPerfil);
 
         btnIngresoEquipos = new javax.swing.JButton("Ingreso de Equipos");
-        btnControlOrdenes = new javax.swing.JButton("Control de Órdenes");
+        btnBancoDespiece = new javax.swing.JButton("Banco de Despiece"); // <--- INICIALIZAR EL NUEVO BOTON
+        btnControlOrdenes = new javax.swing.JButton("Control de Ordenes");
         btnPuntoVenta = new javax.swing.JButton("Punto de Venta");
         btnInventario = new javax.swing.JButton("Inventario");
         btnProveedores = new javax.swing.JButton("Proveedores");
         btnHistorialVentas = new javax.swing.JButton("Historial de Recibos");
         btnClientes = new javax.swing.JButton("Directorio Clientes");
         btnHistorialEquipos = new javax.swing.JButton("Historial Equipos");
-        
-        // --- INICIALIZAR BOTÓN DE GARANTÍAS ---
         btnHistorialGarantias = new javax.swing.JButton("Historial Garantías"); 
         
         btnDashboard = new javax.swing.JButton("Dashboard");
@@ -265,8 +268,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.JPanel catTaller = crearMenuColapsable("[ Taller y Servicios ]", true, btnIngresoEquipos, btnControlOrdenes);
-        // --- METEMOS EL BOTÓN DE GARANTÍAS AL DIRECTORIO ---
+        // --- AGREGAMOS btnBancoDespiece AL MENÚ "Taller y Servicios" ---
+        javax.swing.JPanel catTaller = crearMenuColapsable("[ Taller y Servicios ]", true, btnIngresoEquipos, btnBancoDespiece);
+
         javax.swing.JPanel catDirectorios = crearMenuColapsable("[ Directorios ]", false, btnClientes, btnHistorialEquipos, btnHistorialVentas, btnHistorialGarantias);
         javax.swing.JPanel catVentas = crearMenuColapsable("[ Ventas e Inventario ]", false, btnPuntoVenta, btnInventario, btnProveedores);
         
@@ -368,6 +372,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         seleccionarBotonMenu(btnIngresoEquipos);
     } 
     
+    // --- ACCIÓN DEL NUEVO BOTÓN BANCO DE DESPIECE ---
+    private void btnBancoDespieceActionPerformed(java.awt.event.ActionEvent evt) {                                             
+        mostrarPanel(new PanelDespiece());
+        seleccionarBotonMenu(btnBancoDespiece);
+    }
+    
     private void btnProveedoresActionPerformed(java.awt.event.ActionEvent evt) {                                             
         mostrarPanel(new PanelProveedores());
         seleccionarBotonMenu(btnProveedores);
@@ -385,7 +395,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
     private void btnListadoActionPerformed(java.awt.event.ActionEvent evt) {                                             
         mostrarPanel(new PanelListadoOrdenes());
-        seleccionarBotonMenu(btnControlOrdenes);
+        
     } 
 
     private void btnClientesActionPerformed(java.awt.event.ActionEvent evt) {                                             
@@ -408,7 +418,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         seleccionarBotonMenu(btnHistorialVentas);
     }
     
-    // --- ACCIÓN DEL NUEVO BOTÓN ---
     private void btnHistorialGarantiasActionPerformed(java.awt.event.ActionEvent evt) {                                              
         mostrarPanel(new PanelHistorialGarantias());
         seleccionarBotonMenu(btnHistorialGarantias);
@@ -480,15 +489,16 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     
     private void asignarEventosBotones() {
         btnIngresoEquipos.addActionListener(this::btnIngresoActionPerformed);
+        
+        // --- ASIGNAR EVENTO DEL BOTÓN BANCO DE DESPIECE ---
+        btnBancoDespiece.addActionListener(this::btnBancoDespieceActionPerformed);
+        
         btnControlOrdenes.addActionListener(this::btnListadoActionPerformed);
         btnPuntoVenta.addActionListener(this::btnPuntoVentaActionPerformed);
         btnInventario.addActionListener(this::btnInventarioActionPerformed);
         btnProveedores.addActionListener(this::btnProveedoresActionPerformed);
         btnHistorialVentas.addActionListener(this::btnHistorialVentasActionPerformed);
-        
-        // --- ASIGNAR EVENTO DEL NUEVO BOTÓN ---
         btnHistorialGarantias.addActionListener(this::btnHistorialGarantiasActionPerformed); 
-        
         btnClientes.addActionListener(this::btnClientesActionPerformed);
         btnDashboard.addActionListener(this::btnEstadisticasActionPerformed);
         btnGestionUsuarios.addActionListener(this::btnUsuariosActionPerformed);

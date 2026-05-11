@@ -216,10 +216,18 @@ public class PanelHistorialGarantias extends JPanel {
         dao.VentaDAO daoVenta = new dao.VentaDAO();
         List<Object[]> lista = daoVenta.listarGarantias(filtro);
         
-        for (Object[] fila : lista) {
-            // fila[0]=recibo, 1=fecha, 2=vence, 3=cliente, 4=desc, 5=imei, 6=estado
-            // fila[7]=precio, 8=categoria, 9=telefono, 10=dias_garantia (los nuevos)
-            modeloGarantias.addRow(fila);
+        for (Object[] filaCompleta : lista) {
+            // Creamos una fila recortada para la JTable (solo lo que se debe mostrar visualmente)
+            // Mostramos: Recibo, Fecha, Vence, Cliente, Descripción, IMEI, Estado
+            Object[] filaVisible = new Object[7];
+            System.arraycopy(filaCompleta, 0, filaVisible, 0, 7);
+            
+            // Agregamos la fila visible al modelo
+            modeloGarantias.addRow(filaVisible);
+            
+            // TIP: Si necesitas los datos ocultos (teléfono, categoría, etc.) para la vista previa,
+            // asegúrate de guardarlos en una lista global o recuperarlos del modelo si tu tabla 
+            // tiene columnas ocultas.
         }
         
         // Reset visual al cargar

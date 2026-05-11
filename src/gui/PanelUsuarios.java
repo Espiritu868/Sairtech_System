@@ -25,14 +25,15 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
+import javax.swing.JOptionPane;
 
 public class PanelUsuarios extends javax.swing.JPanel {
 
-    // Declaración manual de componentes para no depender del diseñador de NetBeans
     private JButton btnEliminar;
     private JButton btnEntrar1;
     private JButton btnLimpiar;
     private JButton btnModificar;
+    private JButton btnRespaldoManual; // <-- NUEVO BOTÓN
     private JComboBox<String> cmbRol;
     private JScrollPane scrollUsuarios;
     private JTable tablaUsuarios;
@@ -40,10 +41,10 @@ public class PanelUsuarios extends javax.swing.JPanel {
     private JTextField txtUsuario;
 
     public PanelUsuarios() {
-        initComponents(); // Llama al método vacío de NetBeans para que no moleste
-        inicializarComponentesManualmente(); // Inicializamos nuestros botones reales
-        aplicarDisenoUsuarios(); // Aplicamos el diseño moderno
-        cargarTablaUsuarios(); // Llenamos la tabla
+        initComponents(); 
+        inicializarComponentesManualmente(); 
+        aplicarDisenoUsuarios(); 
+        cargarTablaUsuarios(); 
         
         Set<AWTKeyStroke> teclas = new HashSet<>(
                 getFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS)
@@ -99,6 +100,10 @@ public class PanelUsuarios extends javax.swing.JPanel {
         
         btnLimpiar = new JButton();
         btnLimpiar.addActionListener(this::btnLimpiarActionPerformed);
+        
+        // --- INICIALIZACIÓN NUEVO BOTÓN ---
+        btnRespaldoManual = new JButton("Generar Respaldo Manual Ahora");
+        btnRespaldoManual.addActionListener(e -> solicitarRespaldoManual());
     }
 
     private void aplicarDisenoUsuarios() {
@@ -107,13 +112,11 @@ public class PanelUsuarios extends javax.swing.JPanel {
         this.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
         this.setBackground(new Color(240, 244, 248));
 
-        // TÍTULO SUPERIOR
         JLabel lblTitulo = new JLabel("Gestión de Usuarios y Sistema");
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
         lblTitulo.setForeground(new Color(44, 62, 80));
         this.add(lblTitulo, BorderLayout.NORTH);
 
-        // ZONA IZQUIERDA: ESTILIZAR LA TABLA
         tablaUsuarios.setRowHeight(35);
         tablaUsuarios.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         tablaUsuarios.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -121,7 +124,6 @@ public class PanelUsuarios extends javax.swing.JPanel {
         scrollUsuarios.getViewport().setBackground(Color.WHITE);
         scrollUsuarios.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
 
-        // ZONA DERECHA: EL FORMULARIO MODERNO
         JPanel panelFormulario = new JPanel(new GridBagLayout());
         panelFormulario.setBackground(Color.WHITE);
         panelFormulario.setPreferredSize(new Dimension(350, 0));
@@ -179,7 +181,7 @@ public class PanelUsuarios extends javax.swing.JPanel {
 
         gbc.gridy++; panelFormulario.add(panelBotones, gbc);
 
-        // --- NUEVA SECCIÓN: RESPALDOS DEL SISTEMA ---
+        // --- SECCIÓN: RESPALDOS DEL SISTEMA ---
         gbc.gridy++; gbc.insets = new Insets(40, 0, 5, 0);
         JLabel lblSys = new JLabel("Configuración de Seguridad");
         lblSys.setFont(new Font("Segoe UI", Font.BOLD, 18));
@@ -197,6 +199,17 @@ public class PanelUsuarios extends javax.swing.JPanel {
 
         gbc.gridy++; gbc.insets = new Insets(5, 0, 0, 0);
         panelFormulario.add(btnConfigurarBackup, gbc);
+        
+        // BOTÓN RESPALDO MANUAL
+        btnRespaldoManual.setBackground(new Color(230, 126, 34)); // Naranja de advertencia/acción
+        btnRespaldoManual.setForeground(Color.WHITE);
+        btnRespaldoManual.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnRespaldoManual.setPreferredSize(new Dimension(0, 40));
+        btnRespaldoManual.setFocusPainted(false);
+        btnRespaldoManual.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        
+        gbc.gridy++; gbc.insets = new Insets(10, 0, 0, 0);
+        panelFormulario.add(btnRespaldoManual, gbc);
         // ----------------------------------------------
 
         gbc.gridy++; gbc.weighty = 1.0;
@@ -207,6 +220,59 @@ public class PanelUsuarios extends javax.swing.JPanel {
 
         this.revalidate();
         this.repaint();
+    }
+    
+    // --- LÓGICA DE RESPALDO MANUAL CON DETECTOR DE ERRORES ---
+    private void solicitarRespaldoManual() {
+        javax.swing.JPasswordField pf = new javax.swing.JPasswordField();
+        int okCxl = javax.swing.JOptionPane.showConfirmDialog(this, pf, "Autorización Requerida\nIngrese contraseña de Administrador o Técnico:", javax.swing.JOptionPane.OK_CANCEL_OPTION, javax.swing.JOptionPane.PLAIN_MESSAGE);
+
+        if (okCxl == javax.swing.JOptionPane.OK_OPTION) {
+            String password = new String(pf.getPassword());
+            if (password.isEmpty()) return;
+
+            boolean autorizado = false;
+            
+            // 1. INTENTAMOS VALIDAR LA CONTRASEÑA
+            try (java.sql.Connection con = new factory.ConexionFactory().getConexion();
+                 java.sql.PreparedStatement ps = con.prepareStatement("SELECT id_usuario FROM usuarios WHERE password_hash = ? AND (rol = 'Administrador' OR rol = 'Tecnico')")) {
+                
+                String passwordEncriptado = new dao.UsuarioDAO().encriptarContraseña(password);
+                ps.setString(1, passwordEncriptado);
+
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) autorizado = true;
+                }
+            } catch (Exception ex) {
+                // AHORA SÍ: El servidor nos dirá exactamente por qué falla
+                javax.swing.JOptionPane.showMessageDialog(this, 
+                    "Fallo Técnico en el Servidor:\n" + ex.toString(), 
+                    "Diagnóstico de Error", 
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (!autorizado) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Contraseña incorrecta o sin privilegios.", "Acceso Denegado", javax.swing.JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // 2. INTENTAMOS DEJAR EL MENSAJE EN EL BUZÓN
+            try (java.sql.Connection con = new factory.ConexionFactory().getConexion()) {
+                try (java.sql.PreparedStatement ps = con.prepareStatement("CREATE TABLE IF NOT EXISTS peticiones_backup (id INT PRIMARY KEY AUTO_INCREMENT, fecha DATETIME);")) {
+                    ps.execute(); 
+                }
+                
+                try (java.sql.PreparedStatement psInsert = con.prepareStatement("INSERT INTO peticiones_backup (fecha) VALUES (NOW())")) {
+                    psInsert.executeUpdate();
+                    javax.swing.JOptionPane.showMessageDialog(this, 
+                        "¡Autorización Exitosa!\n\nSe ha enviado la orden silenciosa al Servidor.\nEl respaldo se guardará localmente en el disco F: en un máximo de 60 segundos.", 
+                        "Respaldo en Proceso", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                }
+            } catch (Exception ex) {
+                 javax.swing.JOptionPane.showMessageDialog(this, "Error al crear la petición:\n" + ex.toString(), "Diagnóstico de Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
     
     private void configurarRutaBackup() {
@@ -222,12 +288,13 @@ public class PanelUsuarios extends javax.swing.JPanel {
         }
 
         int seleccion = chooser.showOpenDialog(this);
+
         if (seleccion == javax.swing.JFileChooser.APPROVE_OPTION) {
             String nuevaRuta = chooser.getSelectedFile().getAbsolutePath();
-            
+
             if (utilidades.BackupAutomatico.guardarNuevaRutaBackup(nuevaRuta)) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                    "Ruta de respaldos actualizada correctamente a:\n" + nuevaRuta + "\n\nEl sistema guardará sus copias de seguridad aquí a partir de mañana.",
+                    "Ruta de respaldos actualizada correctamente a:\n" + nuevaRuta + "\n\nEl sistema guardará sus próximas copias de seguridad en esta nueva carpeta.",
                     "Configuración Guardada", javax.swing.JOptionPane.INFORMATION_MESSAGE);
             } else {
                 javax.swing.JOptionPane.showMessageDialog(this,
@@ -259,6 +326,10 @@ public class PanelUsuarios extends javax.swing.JPanel {
         cmbRol.setSelectedIndex(0);
         tablaUsuarios.clearSelection();
         txtUsuario.requestFocus();
+        
+        btnEntrar1.setEnabled(true);   
+        btnModificar.setEnabled(false); 
+        btnEliminar.setEnabled(false);  
     }                                          
 
     private void txtPasswordKeyPressed(java.awt.event.KeyEvent evt) {                                       
@@ -290,13 +361,8 @@ public class PanelUsuarios extends javax.swing.JPanel {
         
         if (daoUsuario.registrarUsuario(usuario, password, rol)) {
             javax.swing.JOptionPane.showMessageDialog(this, "Usuario registrado exitosamente en el sistema.", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-            
-            txtUsuario.setText("");
-            txtPassword.setText("");
-            cmbRol.setSelectedIndex(0);
-            txtUsuario.requestFocus();
-            
             cargarTablaUsuarios(); 
+            btnLimpiar.doClick(); 
         } else {
             javax.swing.JOptionPane.showMessageDialog(this, "Error al registrar. Es posible que este nombre de usuario ya exista.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
@@ -349,11 +415,8 @@ public class PanelUsuarios extends javax.swing.JPanel {
         
         if (daoUsuario.modificarUsuario(idUsuario, nuevoUsuario, nuevoPassword, nuevoRol)) {
             javax.swing.JOptionPane.showMessageDialog(this, "Usuario actualizado correctamente.", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-            
             cargarTablaUsuarios();
-            txtUsuario.setText("");
-            txtPassword.setText("");
-            cmbRol.setSelectedIndex(0);
+            btnLimpiar.doClick(); 
         } else {
             javax.swing.JOptionPane.showMessageDialog(this, "Error al actualizar. Verifique que el nombre de usuario no esté repetido.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
@@ -387,6 +450,7 @@ public class PanelUsuarios extends javax.swing.JPanel {
             if (daoUsuario.eliminarUsuario(idUsuario)) {
                 javax.swing.JOptionPane.showMessageDialog(this, "Acceso revocado. Usuario eliminado correctamente.", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
                 cargarTablaUsuarios(); 
+                btnLimpiar.doClick(); 
             } else {
                 javax.swing.JOptionPane.showMessageDialog(this, "Error al eliminar el usuario.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
             }
@@ -400,6 +464,10 @@ public class PanelUsuarios extends javax.swing.JPanel {
             txtUsuario.setText(tablaUsuarios.getValueAt(fila, 1).toString());
             cmbRol.setSelectedItem(tablaUsuarios.getValueAt(fila, 2).toString());
             txtPassword.setText(""); 
+            
+            btnEntrar1.setEnabled(false);  
+            btnModificar.setEnabled(true); 
+            btnEliminar.setEnabled(true);  
         }
     }                                          
 

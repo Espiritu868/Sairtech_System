@@ -37,7 +37,10 @@ public class ProductoDAO {
             ps.setString(11, producto.getUbicacion());
             
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) { return false; }
+        } catch (SQLException e) { 
+            utilidades.NotificadorWindows.mostrarAlerta("Error de BD", "Fallo al insertar: " + e.getMessage(), java.awt.TrayIcon.MessageType.ERROR);
+            return false; 
+        }
     }
     
     public int insertarConId(modelo.Producto producto) {
@@ -64,10 +67,6 @@ public class ProductoDAO {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
                         int idGenerado = rs.getInt(1);
-                        
-                        // --- MAGIA DEL KARDEX: INVENTARIO INICIAL ---
-                        // Registramos el nacimiento del producto en el Kardex. 
-                        // Usamos id_usuario 1 por defecto al ser creación inicial del sistema.
                         String sqlKardex = "INSERT INTO kardex (id_producto, id_usuario, fecha_movimiento, tipo_movimiento, cantidad, stock_restante_despues, referencia) VALUES (?, 1, NOW(), 'INVENTARIO_INICIAL', ?, ?, 'Ingreso de Nuevo Producto')";
                         try (PreparedStatement psKardex = con.prepareStatement(sqlKardex)) {
                             psKardex.setInt(1, idGenerado);
@@ -75,21 +74,17 @@ public class ProductoDAO {
                             psKardex.setInt(3, producto.getStock());
                             psKardex.executeUpdate();
                         }
-                        // --------------------------------------------
-                        
                         return idGenerado;
                     }
                 }
             }
         } catch (java.sql.SQLIntegrityConstraintViolationException e) {
-            System.err.println("¡Intento de código duplicado bloqueado por la BD!");
             javax.swing.JOptionPane.showMessageDialog(null, 
                 "El Código de Barras que ingresó ya le pertenece a otro producto.\nPor favor, asigne uno distinto o déjelo en blanco para que el sistema lo genere automáticamente.", 
-                "Código Duplicado", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+                "Código Duplicado", javax.swing.JOptionPane.WARNING_MESSAGE);
             return -1;
         } catch (java.sql.SQLException e) {
-            System.err.println("Error general al insertar producto: " + e.getMessage());
+            utilidades.NotificadorWindows.mostrarAlerta("Error Crítico de BD", "Fallo al generar producto: " + e.getMessage(), java.awt.TrayIcon.MessageType.ERROR);
         }
         return -1;
     }
@@ -101,11 +96,14 @@ public class ProductoDAO {
             ps.setString(1, codigoBarras);
             ps.setInt(2, idProducto);
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) { return false; }
+        } catch (SQLException e) { 
+            utilidades.NotificadorWindows.mostrarAlerta("Error de BD", "No se pudo actualizar el código: " + e.getMessage(), java.awt.TrayIcon.MessageType.ERROR);
+            return false; 
+        }
     }
 
     public boolean actualizar(Producto producto) {
-        String sql = "UPDATE productos SET codigo_barras = ?, nombre_producto = ?, id_categoria = ?, precio_compra = ?, precio_venta = ?, stock = ?, stock_minimo = ?, id_proveedor = ?, aplica_precio_tecnico = ?, precio_tecnico = ?, ubicacion = ? WHERE id_producto = ?";
+        String sql = "UPDATE productos SET codigo_barras = ?, nombre_producto = ?, id_categoria = ?, precio_compra = ?, precio_venta = ?, stock_minimo = ?, id_proveedor = ?, aplica_precio_tecnico = ?, precio_tecnico = ?, ubicacion = ? WHERE id_producto = ?";
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
              
@@ -114,22 +112,23 @@ public class ProductoDAO {
             ps.setInt(3, producto.getIdCategoria());
             ps.setDouble(4, producto.getPrecioCompra());
             ps.setDouble(5, producto.getPrecioVenta());
-            ps.setInt(6, producto.getStock());
-            ps.setInt(7, producto.getStockMinimo());
+            ps.setInt(6, producto.getStockMinimo()); 
             
-            if (producto.getIdProveedor() > 0) ps.setInt(8, producto.getIdProveedor());
-            else ps.setNull(8, java.sql.Types.INTEGER);
+            if (producto.getIdProveedor() > 0) ps.setInt(7, producto.getIdProveedor());
+            else ps.setNull(7, java.sql.Types.INTEGER);
             
-            ps.setBoolean(9, producto.isAplicaPrecioTecnico());
-            ps.setDouble(10, producto.getPrecioTecnico());
-            ps.setString(11, producto.getUbicacion());
-            ps.setInt(12, producto.getIdProducto());
+            ps.setBoolean(8, producto.isAplicaPrecioTecnico());
+            ps.setDouble(9, producto.getPrecioTecnico());
+            ps.setString(10, producto.getUbicacion());
+            ps.setInt(11, producto.getIdProducto());
             
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) { return false; }
+        } catch (SQLException e) { 
+            utilidades.NotificadorWindows.mostrarAlerta("Error de BD", "Fallo al actualizar producto: " + e.getMessage(), java.awt.TrayIcon.MessageType.ERROR);
+            return false; 
+        }
     }
 
-    // --- MODIFICADO: Agregado el filtro booleano para papelera ---
     public List<Object[]> buscarProductoCompleto(String textoBusqueda, boolean verEliminados) {
         List<Object[]> lista = new ArrayList<>();
         int filtroEliminado = verEliminados ? 1 : 0;
@@ -137,7 +136,8 @@ public class ProductoDAO {
         String sql = "SELECT p.id_producto, p.codigo_barras, p.nombre_producto, c.nombre_categoria, p.ubicacion, p.precio_compra, p.precio_venta, p.stock, p.stock_minimo, p.id_proveedor, p.aplica_precio_tecnico, p.precio_tecnico " +
                      "FROM productos p " +
                      "JOIN categorias_productos c ON p.id_categoria = c.id_categoria " +
-                     "WHERE p.eliminado = ? AND (p.nombre_producto LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?)";
+                     "WHERE p.eliminado = ? AND (p.nombre_producto LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?) " +
+                     "ORDER BY p.id_producto ASC";
                      
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -168,19 +168,43 @@ public class ProductoDAO {
         return lista;
     }
 
-    // --- NUEVO: Exclusivo para Punto de Venta (Oculta stock 0 y eliminados) ---
+    // --- BÚSQUEDA INTELIGENTE PARA PUNTO DE VENTA ---
     public List<Object[]> buscarProductoParaVenta(String textoBusqueda) {
         List<Object[]> lista = new ArrayList<>();
-        String sql = "SELECT p.id_producto, p.codigo_barras, p.nombre_producto, c.nombre_categoria, p.ubicacion, p.precio_compra, p.precio_venta, p.stock, p.stock_minimo, p.id_proveedor, p.aplica_precio_tecnico, p.precio_tecnico " +
-                     "FROM productos p " +
-                     "JOIN categorias_productos c ON p.id_categoria = c.id_categoria " +
-                     "WHERE p.eliminado = 0 AND p.stock > 0 AND (p.nombre_producto LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?)";
+        String[] palabras = textoBusqueda.trim().split("\\s+");
+        
+        StringBuilder sql = new StringBuilder(
+            "SELECT p.id_producto, p.codigo_barras, p.nombre_producto, c.nombre_categoria, p.ubicacion, p.precio_compra, p.precio_venta, p.stock, p.stock_minimo, p.id_proveedor, p.aplica_precio_tecnico, p.precio_tecnico " +
+            "FROM productos p " +
+            "JOIN categorias_productos c ON p.id_categoria = c.id_categoria " +
+            "WHERE p.eliminado = 0 AND p.stock > 0"
+        );
+                     
+        if (!textoBusqueda.trim().isEmpty()) {
+            for (int i = 0; i < palabras.length; i++) {
+                sql.append(" AND (p.nombre_producto LIKE ? OR REPLACE(p.nombre_producto, ' ', '') LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?)");
+            }
+        }
+        
+        // --- ORDEN ASCENDENTE (AL REVÉS) ---
+        sql.append(" ORDER BY p.id_producto ASC");
                      
         try (Connection con = factory.getConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+             PreparedStatement ps = con.prepareStatement(sql.toString())) {
              
-            String param = "%" + textoBusqueda + "%";
-            ps.setString(1, param); ps.setString(2, param); ps.setString(3, param);
+            int parametroIndex = 1;
+            
+            if (!textoBusqueda.trim().isEmpty()) {
+                for (String palabra : palabras) {
+                    String comodin = "%" + palabra + "%";
+                    String comodinSinEspacios = "%" + palabra.replace(" ", "") + "%"; 
+                    
+                    ps.setString(parametroIndex++, comodin);
+                    ps.setString(parametroIndex++, comodinSinEspacios);
+                    ps.setString(parametroIndex++, comodin);
+                    ps.setString(parametroIndex++, comodin);
+                }
+            }
             
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -200,7 +224,9 @@ public class ProductoDAO {
                     lista.add(fila);
                 }
             }
-        } catch (SQLException e) {}
+        } catch (SQLException e) {
+             System.err.println("Error en buscarProductoParaVenta (Inteligente): " + e.getMessage()); 
+        }
         return lista;
     }
     
@@ -212,10 +238,12 @@ public class ProductoDAO {
             ps.setInt(2, idProducto);
             ps.setInt(3, cantidadVendida); 
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) { return false; }
+        } catch (SQLException e) { 
+            utilidades.NotificadorWindows.mostrarAlerta("Error de BD", "Fallo al restar stock: " + e.getMessage(), java.awt.TrayIcon.MessageType.ERROR);
+            return false; 
+        }
     }
     
-    // --- MODIFICADO: Solo trae productos si no están eliminados ---
     public Producto buscarPorCodigo(String codigoBarras) {
         String sql = "SELECT * FROM productos WHERE codigo_barras = ? AND eliminado = 0";
         try (Connection con = factory.getConexion();
@@ -241,27 +269,30 @@ public class ProductoDAO {
         return null; 
     }
 
-    // --- NUEVO: Borrado Lógico ---
     public boolean eliminar(int idProducto) {
         String sql = "UPDATE productos SET eliminado = 1 WHERE id_producto = ?";
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, idProducto);
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) { return false; }
+        } catch (SQLException e) { 
+            utilidades.NotificadorWindows.mostrarAlerta("Error de BD", "Fallo al mover a la papelera: " + e.getMessage(), java.awt.TrayIcon.MessageType.ERROR);
+            return false; 
+        }
     }
 
-    // --- NUEVO: Restaurar Producto ---
     public boolean restaurar(int idProducto) {
         String sql = "UPDATE productos SET eliminado = 0 WHERE id_producto = ?";
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, idProducto);
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) { return false; }
-    }
+        } catch (SQLException e) { 
+            utilidades.NotificadorWindows.mostrarAlerta("Error de BD", "Fallo al restaurar: " + e.getMessage(), java.awt.TrayIcon.MessageType.ERROR);
+            return false; 
+        }
+    }   
     
-    // --- NUEVO: Consulta rápida para saber si pide IMEI ---
     public int obtenerDiasGarantia(int idProducto) {
         String sql = "SELECT c.dias_garantia FROM productos p JOIN categorias_productos c ON p.id_categoria = c.id_categoria WHERE p.id_producto = ?";
         try (Connection con = factory.getConexion();
@@ -274,36 +305,53 @@ public class ProductoDAO {
         return 0; // Si falla o no tiene, devuelve 0
     }
     
-    // --- MODIFICADO: Ahora acepta un filtro de Categoría ---
+   // --- BÚSQUEDA INTELIGENTE PARA INVENTARIO ---
     public List<Object[]> buscarProductoCompleto(String textoBusqueda, int idCategoriaFiltro, boolean verEliminados) {
         List<Object[]> lista = new ArrayList<>();
         int filtroEliminado = verEliminados ? 1 : 0;
         
-        // Usamos StringBuilder para armar la consulta dinámicamente
+        String[] palabras = textoBusqueda.trim().split("\\s+");
+        
         StringBuilder sql = new StringBuilder(
             "SELECT p.id_producto, p.codigo_barras, p.nombre_producto, c.nombre_categoria, p.ubicacion, p.precio_compra, p.precio_venta, p.stock, p.stock_minimo, p.id_proveedor, p.aplica_precio_tecnico, p.precio_tecnico " +
             "FROM productos p " +
             "JOIN categorias_productos c ON p.id_categoria = c.id_categoria " +
-            "WHERE p.eliminado = ? AND (p.nombre_producto LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?)"
+            "WHERE p.eliminado = ?"
         );
 
-        // Si se seleccionó una categoría específica en el ComboBox, agregamos la condición
         if (idCategoriaFiltro > 0) {
             sql.append(" AND p.id_categoria = ?");
         }
 
+        if (!textoBusqueda.trim().isEmpty()) {
+            for (int i = 0; i < palabras.length; i++) {
+                sql.append(" AND (p.nombre_producto LIKE ? OR REPLACE(p.nombre_producto, ' ', '') LIKE ? OR p.codigo_barras LIKE ? OR c.nombre_categoria LIKE ?)");
+            }
+        }
+
+        // --- ORDEN ASCENDENTE (AL REVÉS) ---
+        sql.append(" ORDER BY p.id_producto ASC");
+
         try (Connection con = factory.getConexion();
              PreparedStatement ps = con.prepareStatement(sql.toString())) {
              
-            String param = "%" + textoBusqueda + "%";
-            ps.setInt(1, filtroEliminado);
-            ps.setString(2, param); 
-            ps.setString(3, param); 
-            ps.setString(4, param);
+            int parametroIndex = 1;
+            ps.setInt(parametroIndex++, filtroEliminado);
             
-            // Si hay categoría, le pasamos el parámetro extra a SQL
             if (idCategoriaFiltro > 0) {
-                ps.setInt(5, idCategoriaFiltro);
+                ps.setInt(parametroIndex++, idCategoriaFiltro);
+            }
+            
+            if (!textoBusqueda.trim().isEmpty()) {
+                for (String palabra : palabras) {
+                    String comodin = "%" + palabra + "%";
+                    String comodinSinEspacios = "%" + palabra.replace(" ", "") + "%"; 
+                    
+                    ps.setString(parametroIndex++, comodin);
+                    ps.setString(parametroIndex++, comodinSinEspacios);
+                    ps.setString(parametroIndex++, comodin);
+                    ps.setString(parametroIndex++, comodin);
+                }
             }
             
             try (ResultSet rs = ps.executeQuery()) {
@@ -325,13 +373,11 @@ public class ProductoDAO {
                 }
             }
         } catch (SQLException e) { 
-            System.err.println("Error en buscarProductoCompleto: " + e.getMessage()); 
+            System.err.println("Error en buscarProductoCompleto (Inteligente): " + e.getMessage()); 
         }
         return lista;
     }
     
-    
-    // --- NUEVO: Trae todas las ubicaciones únicas registradas para llenar el ComboBox ---
     public List<String> obtenerUbicaciones() {
         List<String> ubicaciones = new ArrayList<>();
         String sql = "SELECT DISTINCT ubicacion FROM productos WHERE ubicacion IS NOT NULL AND ubicacion != '' ORDER BY ubicacion ASC";

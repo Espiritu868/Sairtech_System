@@ -1,19 +1,94 @@
 package gui;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.util.Collections;
+import java.util.List;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.table.DefaultTableModel;
+import dao.ClienteDAO;
+import modelo.Cliente;
 
-public class PanelClientes extends javax.swing.JPanel {
+public class PanelClientes extends JPanel {
 
+    // Nuestras variables manuales
     private int idClienteSeleccionado = -1;
+    
+    private JTable tablaClientes;
+    private JTextField txtClienteBusqueda;
+    private JTextField txtIdentidad;
+    private JTextField txtNombre;
+    private JTextField txtApellido;
+    private JTextField txtTelefono;
+    private JTextField txtCorreo;
+    
+    private JButton btnGuardar;
+    private JButton btnModificar;
+    private JButton btnEliminar;
+    private JButton btnLimpiar;
+
     public PanelClientes() {
-        
-        initComponents();
-        this.setSize(1200, 750);
-        cargarTablaClientes("");
-        aplicarDisenoClientes();
+        initComponents(); // Método inofensivo para que NetBeans no llore
+        inicializarComponentesManual(); // Inicializamos nuestros elementos
+        aplicarDisenoClientes(); // Armamos la UI visualmente
+        cargarTablaClientes(""); // Llenamos datos
     }
+    
+    private void inicializarComponentesManual() {
+        tablaClientes = new JTable();
+        tablaClientes.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                tablaClientesMouseClicked();
+            }
+        });
+        
+        txtClienteBusqueda = new JTextField();
+        txtClienteBusqueda.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                cargarTablaClientes(txtClienteBusqueda.getText().trim());
+            }
+        });
+        
+        txtIdentidad = new JTextField();
+        txtNombre = new JTextField();
+        txtApellido = new JTextField();
+        txtTelefono = new JTextField();
+        txtCorreo = new JTextField();
+        
+        btnGuardar = new JButton("Guardar");
+        btnGuardar.addActionListener(e -> btnGuardarActionPerformed());
+        
+        btnModificar = new JButton("Modificar");
+        btnModificar.setEnabled(false);
+        btnModificar.addActionListener(e -> btnModificarActionPerformed());
+        
+        btnEliminar = new JButton("Eliminar");
+        btnEliminar.setEnabled(false);
+        btnEliminar.addActionListener(e -> btnEliminarActionPerformed());
+        
+        btnLimpiar = new JButton("Limpiar");
+        btnLimpiar.setEnabled(false);
+        btnLimpiar.addActionListener(e -> btnLimpiarActionPerformed());
+    }
+
     private void cargarTablaClientes(String textoBusqueda) {
-        dao.ClienteDAO dao = new dao.ClienteDAO();
-        java.util.List<modelo.Cliente> lista;   
+        ClienteDAO dao = new ClienteDAO();
+        List<Cliente> lista;   
        
         if (textoBusqueda.isEmpty()) {
             lista = dao.listar();
@@ -21,23 +96,14 @@ public class PanelClientes extends javax.swing.JPanel {
             lista = dao.buscar(textoBusqueda);
         }
         
-        java.util.Collections.reverse(lista);
+        Collections.reverse(lista);
         
-        javax.swing.table.DefaultTableModel modeloTabla = new javax.swing.table.DefaultTableModel() {
+        DefaultTableModel modeloTabla = new DefaultTableModel(new Object[]{"ID", "Identidad", "Nombre", "Apellido", "Teléfono", "Correo"}, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; 
-            }
+            public boolean isCellEditable(int row, int column) { return false; }
         };
         
-        modeloTabla.addColumn("ID");
-        modeloTabla.addColumn("Identidad");
-        modeloTabla.addColumn("Nombre");
-        modeloTabla.addColumn("Apellido");
-        modeloTabla.addColumn("Teléfono");
-        modeloTabla.addColumn("Correo");
-        
-        for (modelo.Cliente c : lista) {
+        for (Cliente c : lista) {
             Object[] fila = new Object[6];
             String iden = c.getNumeroIdentidad();
             String tel = c.getTelefono();
@@ -49,27 +115,23 @@ public class PanelClientes extends javax.swing.JPanel {
             fila[3] = c.getApellido();
             
             // --- LÓGICA DE LIMPIEZA VISUAL (N/A) ---
-            // Si el teléfono es nulo, está vacío o contiene la identidad (nuestro relleno SN-)
             if (tel == null || tel.trim().isEmpty() || tel.contains(iden) || tel.equals("N/A")) {
                 fila[4] = "N/A";
             } else {
                 fila[4] = tel;
             }
 
-            // Si el correo es nulo, vacío o contiene la identidad
             if (cor == null || cor.trim().isEmpty() || cor.contains(iden) || cor.equals("N/A")) {
                 fila[5] = "N/A";
             } else {
                 fila[5] = cor;
             }
-            // ---------------------------------------
 
             modeloTabla.addRow(fila);
         }
         
         tablaClientes.setModel(modeloTabla);
 
-        // (Mantén tus configuraciones de ancho de columna iguales aquí abajo...)
         if (tablaClientes.getColumnModel().getColumnCount() > 0) {
             tablaClientes.getColumnModel().getColumn(0).setPreferredWidth(50);   
             tablaClientes.getColumnModel().getColumn(1).setPreferredWidth(150); 
@@ -77,211 +139,57 @@ public class PanelClientes extends javax.swing.JPanel {
             tablaClientes.getColumnModel().getColumn(3).setPreferredWidth(160); 
             tablaClientes.getColumnModel().getColumn(4).setPreferredWidth(120); 
             tablaClientes.getColumnModel().getColumn(5).setPreferredWidth(250); 
-            tablaClientes.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF); 
+            tablaClientes.setAutoResizeMode(JTable.AUTO_RESIZE_OFF); 
         }
     }
 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
-
-        jPanel1 = new javax.swing.JPanel();
-        scrollBusqueda = new javax.swing.JScrollPane();
-        tablaClientes = new javax.swing.JTable();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel4 = new javax.swing.JLabel();
-        txtNombre = new javax.swing.JTextField();
-        txtTelefono = new javax.swing.JTextField();
-        jLabel5 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        txtApellido = new javax.swing.JTextField();
-        txtCorreo = new javax.swing.JTextField();
-        btnEliminar = new javax.swing.JButton();
-        btnModificar = new javax.swing.JButton();
-        btnGuardar = new javax.swing.JButton();
-        jLabel7 = new javax.swing.JLabel();
-        txtIdentidad = new javax.swing.JTextField();
-        jLabel8 = new javax.swing.JLabel();
-        txtCliente = new javax.swing.JTextField();
-        btnLimpiar = new javax.swing.JButton();
-
-        setBackground(new java.awt.Color(255, 255, 255));
-        setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jPanel1.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        tablaClientes.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
-            },
-            new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
-            }
-        ));
-        tablaClientes.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                tablaClientesMouseClicked(evt);
-            }
-        });
-        scrollBusqueda.setViewportView(tablaClientes);
-
-        jPanel1.add(scrollBusqueda, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 130, 740, 110));
-
-        jLabel1.setFont(new java.awt.Font("Arial", 0, 48)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel1.setText("REGISTRO CLIENTE");
-        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(180, 20, -1, -1));
-
-        jLabel2.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel2.setText("Nombre");
-        jPanel1.add(jLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 262, -1, 30));
-
-        jLabel4.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel4.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel4.setText("Telefono");
-        jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 312, -1, 30));
-
-        txtNombre.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jPanel1.add(txtNombre, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 260, 254, -1));
-
-        txtTelefono.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jPanel1.add(txtTelefono, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 310, 254, -1));
-
-        jLabel5.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel5.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel5.setText("Correo");
-        jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(430, 312, -1, 30));
-
-        jLabel3.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel3.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel3.setText("Apellido");
-        jPanel1.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(430, 260, -1, 30));
-
-        txtApellido.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jPanel1.add(txtApellido, new org.netbeans.lib.awtextra.AbsoluteConstraints(510, 260, 250, -1));
-
-        txtCorreo.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jPanel1.add(txtCorreo, new org.netbeans.lib.awtextra.AbsoluteConstraints(510, 310, 250, -1));
-
-        btnEliminar.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        btnEliminar.setText("Eliminar");
-        btnEliminar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnEliminar.setEnabled(false);
-        btnEliminar.addActionListener(this::btnEliminarActionPerformed);
-        jPanel1.add(btnEliminar, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 420, -1, 44));
-
-        btnModificar.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        btnModificar.setText("Modificar");
-        btnModificar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnModificar.setEnabled(false);
-        btnModificar.addActionListener(this::btnModificarActionPerformed);
-        jPanel1.add(btnModificar, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 420, -1, 44));
-
-        btnGuardar.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        btnGuardar.setText("Guardar");
-        btnGuardar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnGuardar.addActionListener(this::btnGuardarActionPerformed);
-        jPanel1.add(btnGuardar, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 420, -1, 44));
-
-        jLabel7.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel7.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel7.setText("Identidad");
-        jPanel1.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 362, -1, 30));
-
-        txtIdentidad.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jPanel1.add(txtIdentidad, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 360, 254, -1));
-
-        jLabel8.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel8.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel8.setText("Buscar");
-        jPanel1.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 80, -1, -1));
-
-        txtCliente.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        txtCliente.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyReleased(java.awt.event.KeyEvent evt) {
-                txtClienteKeyReleased(evt);
-            }
-        });
-        jPanel1.add(txtCliente, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 80, 450, -1));
-
-        btnLimpiar.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        btnLimpiar.setText("Limpiar");
-        btnLimpiar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnLimpiar.setEnabled(false);
-        btnLimpiar.addActionListener(this::btnLimpiarActionPerformed);
-        jPanel1.add(btnLimpiar, new org.netbeans.lib.awtextra.AbsoluteConstraints(530, 420, -1, 44));
-
-        add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 70, 780, 490));
-    }// </editor-fold>//GEN-END:initComponents
-
-    private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
+    private void btnGuardarActionPerformed() {                                           
         String identidad = txtIdentidad.getText().trim();
         String nombre = txtNombre.getText().trim();
         String apellido = txtApellido.getText().trim();
         String telefono = txtTelefono.getText().trim();
         String correo = txtCorreo.getText().trim();
 
-        // (ELIMINAMOS EL RELLENO AUTOMÁTICO DE "SN-", AHORA ES OPCIONAL REAL)
-
         if (identidad.isEmpty() || nombre.isEmpty() || apellido.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "La Identidad, Nombre y Apellido son obligatorios.", "Advertencia", javax.swing.JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "La Identidad, Nombre y Apellido son obligatorios.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        if (identidad.length() < 13) {
-            javax.swing.JOptionPane.showMessageDialog(this, "La identidad debe tener al menos 13 dígitos.", "Identidad Inválida", javax.swing.JOptionPane.ERROR_MESSAGE);
+        if (identidad.length() > 13) {
+            JOptionPane.showMessageDialog(this, "La identidad no debe superar los 13 dígitos.", "Identidad Inválida", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        dao.ClienteDAO dao = new dao.ClienteDAO();
+        if (telefono.isEmpty()) telefono = "N/A";
+        if (correo.isEmpty()) correo = "N/A";
+
+        ClienteDAO dao = new ClienteDAO();
 
         if (dao.existeIdentidad(identidad, -1)) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Esta identidad ya está registrada.", "Error de Duplicado", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Esta identidad ya está registrada.", "Error de Duplicado", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // VALIDAMOS EL TELÉFONO SOLO SI EL USUARIO ESCRIBIÓ UNO
-        if (!telefono.isEmpty() && dao.existeTelefono(telefono, -1)) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Este teléfono ya está registrado a otro cliente.", "Error de Duplicado", javax.swing.JOptionPane.ERROR_MESSAGE);
+        if (!telefono.equals("N/A") && dao.existeTelefono(telefono, -1)) {
+            JOptionPane.showMessageDialog(this, "Este teléfono ya está registrado a otro cliente.", "Error de Duplicado", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        modelo.Cliente nuevoCliente = new modelo.Cliente(identidad, nombre, apellido, telefono, correo);
+        Cliente nuevoCliente = new Cliente(identidad, nombre, apellido, telefono, correo);
 
-        // CORRECCIÓN: dao.insertar ahora devuelve el ID generado (!= -1 significa éxito)
         if (dao.insertar(nuevoCliente) != -1) {
-            javax.swing.JOptionPane.showMessageDialog(this, "¡Cliente guardado exitosamente!", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-            btnLimpiarActionPerformed(evt); 
+            JOptionPane.showMessageDialog(this, "¡Cliente guardado exitosamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            btnLimpiarActionPerformed(); 
         } else {
-            javax.swing.JOptionPane.showMessageDialog(this, "Error crítico de base de datos.", "Error Crítico", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error crítico de base de datos.", "Error Crítico", JOptionPane.ERROR_MESSAGE);
         }
-    }//GEN-LAST:event_btnGuardarActionPerformed
+    }                                          
 
-    private void txtClienteKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtClienteKeyReleased
-
-        String texto = txtCliente.getText().trim();
-
-        cargarTablaClientes(texto);
-    }//GEN-LAST:event_txtClienteKeyReleased
-
-    private void tablaClientesMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tablaClientesMouseClicked
-
+    private void tablaClientesMouseClicked() {                                           
         int fila = tablaClientes.getSelectedRow();
         
         if (fila >= 0) {
             try {
-                
                 idClienteSeleccionado = Integer.parseInt(tablaClientes.getValueAt(fila, 0).toString());
                 
                 Object identidad = tablaClientes.getValueAt(fila, 1);
@@ -294,27 +202,25 @@ public class PanelClientes extends javax.swing.JPanel {
                 txtApellido.setText(apellido != null ? apellido.toString() : "");
                 
                 Object telefono = tablaClientes.getValueAt(fila, 4);
-                txtTelefono.setText(telefono != null ? telefono.toString() : "");
+                txtTelefono.setText(telefono != null && !telefono.toString().equals("N/A") ? telefono.toString() : "");
                 
                 Object correo = tablaClientes.getValueAt(fila, 5);
-                txtCorreo.setText(correo != null ? correo.toString() : "");
+                txtCorreo.setText(correo != null && !correo.toString().equals("N/A") ? correo.toString() : "");
                 
                 btnGuardar.setEnabled(false);
-                
                 btnModificar.setEnabled(true);
                 btnEliminar.setEnabled(true);
                 btnLimpiar.setEnabled(true);
                 
             } catch (Exception e) {
-                javax.swing.JOptionPane.showMessageDialog(this, "Error al leer la tabla: " + e.getMessage());
-                System.err.println("Error técnico: " + e);
+                JOptionPane.showMessageDialog(this, "Error al leer la tabla: " + e.getMessage());
             }
         }
-    }//GEN-LAST:event_tablaClientesMouseClicked
+    }                                          
 
-    private void btnModificarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnModificarActionPerformed
+    private void btnModificarActionPerformed() {                                             
         if (idClienteSeleccionado == -1) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Seleccione un cliente de la tabla.", "Aviso", javax.swing.JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Seleccione un cliente de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -324,75 +230,73 @@ public class PanelClientes extends javax.swing.JPanel {
         String telefonoActual = txtTelefono.getText().trim();
         String correoActual = txtCorreo.getText().trim();
 
-        // (ELIMINAMOS EL RELLENO AUTOMÁTICO DE "SN-")
-
         int fila = tablaClientes.getSelectedRow();
         String identidadTabla = tablaClientes.getValueAt(fila, 1).toString();
         String nombreTabla = tablaClientes.getValueAt(fila, 2).toString();
         String apellidoTabla = tablaClientes.getValueAt(fila, 3).toString();
+        
         Object telefonoObj = tablaClientes.getValueAt(fila, 4);
-        String telefonoTabla = (telefonoObj != null) ? telefonoObj.toString() : "";
+        String telefonoTabla = (telefonoObj != null && !telefonoObj.toString().equals("N/A")) ? telefonoObj.toString() : "";
+        
         Object correoObj = tablaClientes.getValueAt(fila, 5);
-        String correoTabla = (correoObj != null) ? correoObj.toString() : "";
+        String correoTabla = (correoObj != null && !correoObj.toString().equals("N/A")) ? correoObj.toString() : "";
 
         if (identidadActual.equals(identidadTabla) && nombreActual.equals(nombreTabla) && 
             apellidoActual.equals(apellidoTabla) && telefonoActual.equals(telefonoTabla) && 
             correoActual.equals(correoTabla)) {
-            javax.swing.JOptionPane.showMessageDialog(this, "No se han detectado cambios en los datos.", "Información", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No se han detectado cambios en los datos.", "Información", JOptionPane.INFORMATION_MESSAGE);
             return; 
         }
 
-        // Obligatorios
         if (identidadActual.isEmpty() || nombreActual.isEmpty() || apellidoActual.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "La Identidad, Nombre y Apellido no pueden quedar vacíos.", "Advertencia", javax.swing.JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "La Identidad, Nombre y Apellido no pueden quedar vacíos.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        if (identidadActual.length() < 13) {
-            javax.swing.JOptionPane.showMessageDialog(this, "La identidad debe tener al menos 13 dígitos.", "Identidad Inválida", javax.swing.JOptionPane.ERROR_MESSAGE);
+        if (identidadActual.length() > 13) {
+            JOptionPane.showMessageDialog(this, "La identidad no debe superar los 13 dígitos.", "Identidad Inválida", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        dao.ClienteDAO dao = new dao.ClienteDAO();
+        ClienteDAO dao = new ClienteDAO();
 
         if (dao.existeIdentidad(identidadActual, idClienteSeleccionado)) {
-            javax.swing.JOptionPane.showMessageDialog(this, "La nueva identidad ya pertenece a otro cliente.", "Error de Duplicado", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "La nueva identidad ya pertenece a otro cliente.", "Error de Duplicado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        if (telefonoActual.isEmpty()) telefonoActual = "N/A";
+        if (correoActual.isEmpty()) correoActual = "N/A";
+
+        if (!telefonoActual.equals("N/A") && dao.existeTelefono(telefonoActual, idClienteSeleccionado)) {
+            JOptionPane.showMessageDialog(this, "El nuevo teléfono ya pertenece a otro cliente.", "Error de Duplicado", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // VALIDAMOS EL TELÉFONO SOLO SI EL USUARIO ESCRIBIÓ UNO
-        if (!telefonoActual.isEmpty() && dao.existeTelefono(telefonoActual, idClienteSeleccionado)) {
-            javax.swing.JOptionPane.showMessageDialog(this, "El nuevo teléfono ya pertenece a otro cliente.", "Error de Duplicado", javax.swing.JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Actualizar
-        modelo.Cliente clienteModificado = new modelo.Cliente(idClienteSeleccionado, identidadActual, nombreActual, apellidoActual, telefonoActual, correoActual);
+        Cliente clienteModificado = new Cliente(idClienteSeleccionado, identidadActual, nombreActual, apellidoActual, telefonoActual, correoActual);
         
         if (dao.actualizar(clienteModificado)) {
-            javax.swing.JOptionPane.showMessageDialog(this, "¡Datos actualizados!", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-            btnLimpiarActionPerformed(evt);
+            JOptionPane.showMessageDialog(this, "¡Datos actualizados!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            btnLimpiarActionPerformed();
         } else {
-            javax.swing.JOptionPane.showMessageDialog(this, "Error al actualizar la base de datos.", "Error Crítico", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error al actualizar la base de datos.", "Error Crítico", JOptionPane.ERROR_MESSAGE);
         }
-    }//GEN-LAST:event_btnModificarActionPerformed
+    }                                            
     
-    
-    private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
-
+    private void btnEliminarActionPerformed() {                                            
         if (idClienteSeleccionado == -1) {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione un cliente de la tabla para eliminarlo.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        dao.ClienteDAO dao = new dao.ClienteDAO();
+        ClienteDAO dao = new ClienteDAO();
 
         if (dao.tieneHistorial(idClienteSeleccionado)) {
             JOptionPane.showMessageDialog(this, 
                 "No se puede eliminar este cliente porque tiene equipos o reparaciones en el historial.\nPor seguridad contable, sus datos están protegidos.", 
                 "Acción Denegada", 
                 JOptionPane.ERROR_MESSAGE);
-            return; // Detenemos la eliminación
+            return; 
         }
 
         int confirmacion = JOptionPane.showConfirmDialog(this, 
@@ -402,139 +306,119 @@ public class PanelClientes extends javax.swing.JPanel {
                 JOptionPane.WARNING_MESSAGE);
 
         if (confirmacion == JOptionPane.YES_OPTION) {
-
             if (dao.eliminar(idClienteSeleccionado)) {
                 JOptionPane.showMessageDialog(this, "Cliente eliminado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-
-                txtIdentidad.setText("");
-                txtNombre.setText("");
-                txtApellido.setText("");
-                txtTelefono.setText("");
-                txtCorreo.setText("");
-                txtCliente.setText("");
-
-                idClienteSeleccionado = -1;
-
-                btnGuardar.setEnabled(true);
-                btnModificar.setEnabled(false); 
-                btnEliminar.setEnabled(false);    
-
-                cargarTablaClientes(""); 
+                btnLimpiarActionPerformed();
             } else {
                 JOptionPane.showMessageDialog(this, "Error al eliminar el cliente.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
-    }//GEN-LAST:event_btnEliminarActionPerformed
+    }                                           
 
-    private void btnLimpiarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpiarActionPerformed
-
+    private void btnLimpiarActionPerformed() {                                           
         txtIdentidad.setText("");
         txtNombre.setText("");
         txtApellido.setText("");
         txtTelefono.setText("");
         txtCorreo.setText("");
-        txtCliente.setText(""); 
+        txtClienteBusqueda.setText(""); 
         
         idClienteSeleccionado = -1;
         
         btnGuardar.setEnabled(true);     
         btnModificar.setEnabled(false);  
-        btnEliminar.setEnabled(false);      
+        btnEliminar.setEnabled(false);   
+        btnLimpiar.setEnabled(false);   
         
         tablaClientes.clearSelection();
-        
         cargarTablaClientes("");
-    }//GEN-LAST:event_btnLimpiarActionPerformed
+    }                                          
 
     private void aplicarDisenoClientes() {
         this.removeAll();
-        this.setLayout(new java.awt.BorderLayout(20, 20));
-        this.setBorder(javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25));
-        this.setBackground(new java.awt.Color(240, 244, 248)); 
+        this.setLayout(new BorderLayout(20, 20));
+        this.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
+        this.setBackground(new Color(240, 244, 248)); 
 
-
-        javax.swing.JLabel lblTitulo = new javax.swing.JLabel("Gestión de Clientes");
-        lblTitulo.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 26));
-        lblTitulo.setForeground(new java.awt.Color(44, 62, 80));
-        this.add(lblTitulo, java.awt.BorderLayout.NORTH);
+        JLabel lblTitulo = new JLabel("Gestión de Clientes");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        lblTitulo.setForeground(new Color(44, 62, 80));
+        this.add(lblTitulo, BorderLayout.NORTH);
 
         // ZONA IZQUIERDA: BUSCADOR Y TABLA
-        javax.swing.JPanel panelIzquierdo = new javax.swing.JPanel(new java.awt.BorderLayout(0, 10));
+        JPanel panelIzquierdo = new JPanel(new BorderLayout(0, 10));
         panelIzquierdo.setOpaque(false);
         
-        // --- El Buscador ---
-        javax.swing.JPanel panelBuscador = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
+        JPanel panelBuscador = new JPanel(new BorderLayout(10, 0));
         panelBuscador.setOpaque(false);
-        javax.swing.JLabel lblBuscar = new javax.swing.JLabel("Buscar Cliente (Nombre o Identidad):");
-        lblBuscar.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14));
-        txtCliente.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 14)); // Este es tu campo de búsqueda
-        txtCliente.setPreferredSize(new java.awt.Dimension(0, 35));
-        panelBuscador.add(lblBuscar, java.awt.BorderLayout.WEST);
-        panelBuscador.add(txtCliente, java.awt.BorderLayout.CENTER);
+        JLabel lblBuscar = new JLabel("Buscar Cliente (Nombre o Identidad):");
+        lblBuscar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        txtClienteBusqueda.setFont(new Font("Segoe UI", Font.PLAIN, 14)); 
+        txtClienteBusqueda.setPreferredSize(new Dimension(0, 35));
+        panelBuscador.add(lblBuscar, BorderLayout.WEST);
+        panelBuscador.add(txtClienteBusqueda, BorderLayout.CENTER);
         
-        // --- La Tabla ---
         tablaClientes.setRowHeight(35);
-        tablaClientes.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 14));
-        tablaClientes.getTableHeader().setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14));
-        scrollBusqueda.getViewport().setBackground(java.awt.Color.WHITE);
-        scrollBusqueda.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)));
+        tablaClientes.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        tablaClientes.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JScrollPane scrollBusqueda = new JScrollPane(tablaClientes);
+        scrollBusqueda.getViewport().setBackground(Color.WHITE);
+        scrollBusqueda.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
 
-        panelIzquierdo.add(panelBuscador, java.awt.BorderLayout.NORTH);
-        panelIzquierdo.add(scrollBusqueda, java.awt.BorderLayout.CENTER);
-        this.add(panelIzquierdo, java.awt.BorderLayout.CENTER); // El panel izquierdo toma todo el espacio central
+        panelIzquierdo.add(panelBuscador, BorderLayout.NORTH);
+        panelIzquierdo.add(scrollBusqueda, BorderLayout.CENTER);
+        this.add(panelIzquierdo, BorderLayout.CENTER);
 
         // ZONA DERECHA: FORMULARIO BLANCO
-        javax.swing.JPanel panelFormulario = new javax.swing.JPanel(new java.awt.GridBagLayout());
-        panelFormulario.setBackground(java.awt.Color.WHITE);
-        panelFormulario.setPreferredSize(new java.awt.Dimension(300, 0));
-        panelFormulario.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 220, 220)),
-                javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        JPanel panelFormulario = new JPanel(new GridBagLayout());
+        panelFormulario.setBackground(Color.WHITE);
+        panelFormulario.setPreferredSize(new Dimension(300, 0));
+        panelFormulario.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 220, 220)),
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
 
-        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
-        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gbc.insets = new java.awt.Insets(5, 0, 2, 0);
-        gbc.weightx = 1.0;
-        gbc.gridx = 0;
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.insets = new Insets(5, 0, 2, 0);
+        gbc.weightx = 1.0; gbc.gridx = 0;
 
-        javax.swing.JLabel lblSub = new javax.swing.JLabel("Datos del Cliente");
-        lblSub.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 18));
-        lblSub.setForeground(java.awt.Color.GRAY);
-        gbc.gridy = 0; gbc.insets = new java.awt.Insets(0, 0, 15, 0);
+        JLabel lblSub = new JLabel("Datos del Cliente");
+        lblSub.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblSub.setForeground(Color.GRAY);
+        gbc.gridy = 0; gbc.insets = new Insets(0, 0, 15, 0);
         panelFormulario.add(lblSub, gbc);
 
-        gbc.insets = new java.awt.Insets(5, 0, 2, 0);
-        gbc.gridy++; panelFormulario.add(new javax.swing.JLabel("Identidad:"), gbc);
+        // Estilizar los inputs
+        JTextField[] inputs = {txtIdentidad, txtNombre, txtApellido, txtTelefono, txtCorreo};
+        for (JTextField txt : inputs) {
+            txt.setPreferredSize(new Dimension(0, 35));
+            txt.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        }
+
+        gbc.insets = new Insets(5, 0, 2, 0);
+        gbc.gridy++; panelFormulario.add(new JLabel("Identidad:"), gbc);
         gbc.gridy++; panelFormulario.add(txtIdentidad, gbc);
 
-        gbc.gridy++; panelFormulario.add(new javax.swing.JLabel("Nombre:"), gbc);
+        gbc.gridy++; panelFormulario.add(new JLabel("Nombre:"), gbc);
         gbc.gridy++; panelFormulario.add(txtNombre, gbc);
 
-        gbc.gridy++; panelFormulario.add(new javax.swing.JLabel("Apellido:"), gbc);
+        gbc.gridy++; panelFormulario.add(new JLabel("Apellido:"), gbc);
         gbc.gridy++; panelFormulario.add(txtApellido, gbc);
 
-        gbc.gridy++; panelFormulario.add(new javax.swing.JLabel("Teléfono:"), gbc);
+        gbc.gridy++; panelFormulario.add(new JLabel("Teléfono: (Opcional)"), gbc);
         gbc.gridy++; panelFormulario.add(txtTelefono, gbc);
 
-        gbc.gridy++; panelFormulario.add(new javax.swing.JLabel("Correo:"), gbc);
+        gbc.gridy++; panelFormulario.add(new JLabel("Correo: (Opcional)"), gbc);
         gbc.gridy++; panelFormulario.add(txtCorreo, gbc);
 
-        gbc.gridy++; gbc.insets = new java.awt.Insets(20, 0, 0, 0);
-        javax.swing.JPanel panelBotones = new javax.swing.JPanel(new java.awt.GridLayout(2, 2, 10, 10));
+        gbc.gridy++; gbc.insets = new Insets(20, 0, 0, 0);
+        JPanel panelBotones = new JPanel(new GridLayout(2, 2, 10, 10));
         panelBotones.setOpaque(false);
 
-        btnGuardar.setBackground(new java.awt.Color(46, 204, 113)); btnGuardar.setForeground(java.awt.Color.WHITE);
-        btnGuardar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-
-        btnModificar.setBackground(new java.awt.Color(52, 152, 219)); btnModificar.setForeground(java.awt.Color.WHITE);
-        btnModificar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-
-        btnEliminar.setBackground(new java.awt.Color(231, 76, 60)); btnEliminar.setForeground(java.awt.Color.WHITE);
-        btnEliminar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-
-        btnLimpiar.setBackground(java.awt.Color.GRAY); btnLimpiar.setForeground(java.awt.Color.WHITE);
-        btnLimpiar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        estilizarBoton(btnGuardar, new Color(46, 204, 113));
+        estilizarBoton(btnModificar, new Color(52, 152, 219));
+        estilizarBoton(btnEliminar, new Color(231, 76, 60));
+        estilizarBoton(btnLimpiar, Color.GRAY);
 
         panelBotones.add(btnGuardar);
         panelBotones.add(btnModificar);
@@ -544,34 +428,38 @@ public class PanelClientes extends javax.swing.JPanel {
         gbc.gridy++; panelFormulario.add(panelBotones, gbc);
 
         gbc.gridy++; gbc.weighty = 1.0;
-        panelFormulario.add(javax.swing.Box.createVerticalGlue(), gbc);
+        panelFormulario.add(Box.createVerticalGlue(), gbc);
 
-        this.add(panelFormulario, java.awt.BorderLayout.EAST);
+        this.add(panelFormulario, BorderLayout.EAST);
 
         this.revalidate();
         this.repaint();
     }
     
+    private void estilizarBoton(JButton btn, Color color) {
+        btn.setBackground(color);
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }                     
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
+        this.setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 400, Short.MAX_VALUE)
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 300, Short.MAX_VALUE)
+        );
+    }// </editor-fold>//GEN-END:initComponents
+
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnEliminar;
-    private javax.swing.JButton btnGuardar;
-    private javax.swing.JButton btnLimpiar;
-    private javax.swing.JButton btnModificar;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane scrollBusqueda;
-    private javax.swing.JTable tablaClientes;
-    private javax.swing.JTextField txtApellido;
-    private javax.swing.JTextField txtCliente;
-    private javax.swing.JTextField txtCorreo;
-    private javax.swing.JTextField txtIdentidad;
-    private javax.swing.JTextField txtNombre;
-    private javax.swing.JTextField txtTelefono;
     // End of variables declaration//GEN-END:variables
 }

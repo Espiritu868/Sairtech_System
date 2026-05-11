@@ -244,9 +244,14 @@ public class PanelHistorialRecibos extends JPanel {
             boolean ok = impresora.imprimirReciboVenta(idVentaSeleccionada);
             
             if (ok) {
-                JOptionPane.showMessageDialog(this, "Ticket enviado a la impresora.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                // CAMBIO: Notificación nativa de Windows
+                utilidades.NotificadorWindows.mostrarAlerta(
+                    "Reimpresión Exitosa", 
+                    "El recibo #" + idVentaSeleccionada + " ha sido enviado a la ticketera.", 
+                    java.awt.TrayIcon.MessageType.INFO
+                );
             } else {
-                JOptionPane.showMessageDialog(this, "Error al comunicar con la impresora.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al comunicar con la impresora.", "Error de Hardware", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

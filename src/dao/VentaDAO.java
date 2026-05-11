@@ -7,7 +7,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,9 +17,6 @@ public class VentaDAO {
         this.factory = new ConexionFactory();
     }
 
-    // =========================================================================
-    // REGISTRAR VENTA COMPLETA (Transacción Segura)
-    // =========================================================================
     // =========================================================================
     // REGISTRAR VENTA COMPLETA (Transacción Segura + KARDEX AUTOMÁTICO)
     // =========================================================================
@@ -71,40 +67,61 @@ public class VentaDAO {
                     psDetalle.setInt(1, idVentaGenerado);
                     int idProductoVenta = detalle.getIdProducto();
                     
-                    if (idProductoVenta > 0) {
+                    // --- BLINDAJE DE LLAVE FORÁNEA ---
+                    // Solo guardamos el ID en detalles_venta si es un producto normal (>0 y < 70000)
+                    if (idProductoVenta > 0 && idProductoVenta < 70000) {
                         psDetalle.setInt(2, idProductoVenta); 
-                        
-                        if (idProductoVenta >= 70000) {
-                            // ES PANTALLA KNIJICO
-                            int idRealKnijico = idProductoVenta - 70000;
-                            psStockKnijico.setInt(1, detalle.getCantidad());
-                            psStockKnijico.setInt(2, idRealKnijico);
-                            psStockKnijico.executeUpdate();
-                        } else {
-                            // ES PRODUCTO NORMAL
-                            psStockNormal.setInt(1, detalle.getCantidad());
-                            psStockNormal.setInt(2, idProductoVenta);
-                            psStockNormal.executeUpdate();
-                            
-                            // --- MAGIA DEL KARDEX: Consultar cómo quedó el stock tras la venta ---
-                            int stockResultante = 0;
-                            psConsultarStock.setInt(1, idProductoVenta);
-                            try (ResultSet rsStock = psConsultarStock.executeQuery()) {
-                                if(rsStock.next()) stockResultante = rsStock.getInt("stock");
-                            }
-                            
-                            // --- MAGIA DEL KARDEX: Guardar el historial ---
-                            psKardex.setInt(1, idProductoVenta);
-                            psKardex.setInt(2, venta.getIdUsuario());
-                            psKardex.setInt(3, -detalle.getCantidad()); // Negativo porque es una SALIDA
-                            psKardex.setInt(4, stockResultante);
-                            psKardex.setString(5, "Recibo #" + String.format("%08d", idVentaGenerado));
-                            psKardex.executeUpdate();
-                        }
                     } else {
+                        // Para Órdenes, Servicios manuales y Pantallas Knijico, mandamos NULL
                         psDetalle.setNull(2, java.sql.Types.INTEGER); 
                     }
                     
+                    // --- ACTUALIZACIÓN DE STOCK Y KARDEX ---
+                    if (idProductoVenta >= 70000) {
+                        // ES PANTALLA KNIJICO
+                        int idRealKnijico = idProductoVenta - 70000;
+                        psStockKnijico.setInt(1, detalle.getCantidad());
+                        psStockKnijico.setInt(2, idRealKnijico);
+                        psStockKnijico.executeUpdate();
+                        
+                        // --- MAGIA DEL KARDEX PARA KNIJICO ---
+                        int stockResultante = 0;
+                        String sqlConsultarKnijico = "SELECT stock FROM pantallas_knijico WHERE id_pantalla = ?";
+                        try (PreparedStatement psCons = con.prepareStatement(sqlConsultarKnijico)) {
+                            psCons.setInt(1, idRealKnijico);
+                            try (ResultSet rsStock = psCons.executeQuery()) {
+                                if(rsStock.next()) stockResultante = rsStock.getInt("stock");
+                            }
+                        }
+                        psKardex.setInt(1, idProductoVenta); // Usamos el ID virtual
+                        psKardex.setInt(2, venta.getIdUsuario());
+                        psKardex.setInt(3, -detalle.getCantidad()); // Negativo porque es SALIDA
+                        psKardex.setInt(4, stockResultante);
+                        psKardex.setString(5, "Recibo #" + String.format("%08d", idVentaGenerado));
+                        psKardex.executeUpdate();
+                        
+                    } else if (idProductoVenta > 0) {
+                        // ES PRODUCTO NORMAL
+                        psStockNormal.setInt(1, detalle.getCantidad());
+                        psStockNormal.setInt(2, idProductoVenta);
+                        psStockNormal.executeUpdate();
+                        
+                        // --- MAGIA DEL KARDEX PARA PRODUCTO NORMAL ---
+                        int stockResultante = 0;
+                        psConsultarStock.setInt(1, idProductoVenta);
+                        try (ResultSet rsStock = psConsultarStock.executeQuery()) {
+                            if(rsStock.next()) stockResultante = rsStock.getInt("stock");
+                        }
+                        
+                        psKardex.setInt(1, idProductoVenta);
+                        psKardex.setInt(2, venta.getIdUsuario());
+                        psKardex.setInt(3, -detalle.getCantidad()); // Negativo porque es SALIDA
+                        psKardex.setInt(4, stockResultante);
+                        psKardex.setString(5, "Recibo #" + String.format("%08d", idVentaGenerado));
+                        psKardex.executeUpdate();
+                    }
+                    
+                    // Guardamos el resto de los datos del detalle
                     psDetalle.setString(3, detalle.getDescripcion());
                     psDetalle.setInt(4, detalle.getCantidad());
                     psDetalle.setDouble(5, detalle.getPrecioUnitario());
@@ -137,7 +154,7 @@ public class VentaDAO {
     }
     
     // =========================================================================
-    // LISTAR HISTORIAL DE VENTAS (SOLO MOSTRADOR, EXCLUYE TALLER)
+    // LISTAR HISTORIAL DE VENTAS (CORREGIDO PARA INCLUIR REPARACIONES)
     // =========================================================================
     public List<Object[]> listarHistorialVentas(String busqueda) {
         List<Object[]> lista = new ArrayList<>();
@@ -148,7 +165,7 @@ public class VentaDAO {
                      "FROM ventas v " +
                      "LEFT JOIN clientes c ON v.id_cliente = c.id_cliente " +
                      "JOIN usuarios u ON v.id_usuario = u.id_usuario " +
-                     "WHERE v.id_orden IS NULL AND (" +
+                     "WHERE (" +
                      "CAST(v.id_venta AS CHAR) LIKE ? " +
                      "OR v.fecha_venta LIKE ? " +
                      "OR IFNULL(CONCAT(c.nombre, ' ', c.apellido), 'Consumidor Final') LIKE ? " +
@@ -161,7 +178,6 @@ public class VentaDAO {
              PreparedStatement ps = con.prepareStatement(sql)) {
              
             String param = "%" + busqueda + "%";
-            
             for (int i = 1; i <= 6; i++) {
                 ps.setString(i, param);
             }

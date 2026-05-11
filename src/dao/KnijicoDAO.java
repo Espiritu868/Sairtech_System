@@ -23,6 +23,37 @@ public class KnijicoDAO {
             return false;
         }
     }
+    
+    // --- VALIDACIÓN DE LOTES DUPLICADOS ---
+    public boolean existeLote(String nombreLote) {
+        String sql = "SELECT id_lote FROM lotes_knijico WHERE nombre_lote = ?";
+        try (Connection con = new factory.ConexionFactory().getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, nombreLote);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return true; 
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al verificar existencia de lote: " + e.getMessage());
+        }
+        return false;
+    }
+    
+    // --- NUEVO: EDITAR NOMBRE DE LOTE ---
+    public boolean actualizarNombreLote(int idLote, String nuevoNombre) {
+        String sql = "UPDATE lotes_knijico SET nombre_lote = ? WHERE id_lote = ?";
+        try (Connection con = new factory.ConexionFactory().getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, nuevoNombre);
+            ps.setInt(2, idLote);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.err.println("Error al actualizar nombre de lote: " + e.getMessage());
+            return false;
+        }
+    }
 
     public List<Object[]> obtenerLotesActivos() {
         List<Object[]> lista = new ArrayList<>();

@@ -102,7 +102,7 @@ public class JDialogAjusteManualKardex extends JDialog {
         btnGuardar.setFocusPainted(false);
         btnGuardar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         
-        // --- MAGIA CON CONTRASEÑA ---
+        // --- MAGIA CON CONTRASEÑA MODIFICADA PARA AMBOS ROLES ---
         btnGuardar.addActionListener(e -> {
             String referencia = txtReferencia.getText().trim();
             String tipo = cmbTipoAjuste.getSelectedItem().toString();
@@ -121,23 +121,23 @@ public class JDialogAjusteManualKardex extends JDialog {
                 return;
             }
 
-            // PEDIR CONTRASEÑA DE ADMINISTRADOR ANTES DE GUARDAR
+            // PEDIR CONTRASEÑA ANTES DE GUARDAR
             javax.swing.JPasswordField pwd = new javax.swing.JPasswordField(15);
             pwd.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 16));
             Object[] mensaje = {
-                "Autorización Requerida.\nIngrese credenciales de Administrador para modificar el Kardex:\n\n", pwd
+                "Autorización Requerida.\nIngrese su PIN / Contraseña para firmar el movimiento del Kardex:\n\n", pwd
             };
             
-            int opcion = javax.swing.JOptionPane.showConfirmDialog(this, mensaje, "Seguridad de Inventario", javax.swing.JOptionPane.OK_CANCEL_OPTION, javax.swing.JOptionPane.WARNING_MESSAGE);
+            int opcion = javax.swing.JOptionPane.showConfirmDialog(this, mensaje, "Firma Electrónica", javax.swing.JOptionPane.OK_CANCEL_OPTION, javax.swing.JOptionPane.WARNING_MESSAGE);
             
             if (opcion == javax.swing.JOptionPane.OK_OPTION) {
                 String passwordIngresada = new String(pwd.getPassword());
-                int idAdminEncontrado = verificarContrasenaAdmin(passwordIngresada);
+                int idUsuarioEncontrado = verificarContrasenaUsuario(passwordIngresada);
                 
-                if (idAdminEncontrado != -1) {
-                    // Contraseña Correcta: Hacemos el movimiento
+                if (idUsuarioEncontrado != -1) {
+                    // Contraseña Correcta (Admin o Técnico): Hacemos el movimiento
                     dao.KardexDAO kardexDao = new dao.KardexDAO();
-                    boolean exito = kardexDao.registrarAjusteManual(this.idProducto, idAdminEncontrado, referencia, tipo, cantidad);
+                    boolean exito = kardexDao.registrarAjusteManual(this.idProducto, idUsuarioEncontrado, referencia, tipo, cantidad);
                     
                     if (exito) {
                         javax.swing.JOptionPane.showMessageDialog(this, "Ajuste manual registrado exitosamente.", "Éxito", javax.swing.JOptionPane.INFORMATION_MESSAGE);
@@ -146,7 +146,7 @@ public class JDialogAjusteManualKardex extends JDialog {
                         javax.swing.JOptionPane.showMessageDialog(this, "Error al registrar el Kardex.\nVerifique que la cantidad no deje el stock en negativo.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
                     }
                 } else {
-                    javax.swing.JOptionPane.showMessageDialog(this, "Acceso denegado.\nLa contraseña es incorrecta o no pertenece a un Administrador.", "Error de Seguridad", javax.swing.JOptionPane.ERROR_MESSAGE);
+                    javax.swing.JOptionPane.showMessageDialog(this, "Acceso denegado.\nLa contraseña es incorrecta o no existe en el sistema.", "Error de Seguridad", javax.swing.JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -159,8 +159,8 @@ public class JDialogAjusteManualKardex extends JDialog {
         this.add(panelContenedor);
     }
     
-    // --- FUNCIÓN PARA VERIFICAR CONTRASEÑA (Igual a la de tu VentanaPrincipal) ---
-    private int verificarContrasenaAdmin(String password) {
+    // --- FUNCIÓN PARA VERIFICAR CONTRASEÑA (Ahora acepta cualquier usuario activo) ---
+    private int verificarContrasenaUsuario(String password) {
         String hashGenerado = "";
         try {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
@@ -176,7 +176,8 @@ public class JDialogAjusteManualKardex extends JDialog {
             return -1;
         }
         
-        String sql = "SELECT id_usuario FROM usuarios WHERE password_hash = ? AND rol = 'Administrador'";
+        // CORRECCIÓN: Quitamos el "AND rol = 'Administrador'"
+        String sql = "SELECT id_usuario FROM usuarios WHERE password_hash = ?";
         try (java.sql.Connection con = new factory.ConexionFactory().getConexion();
              java.sql.PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, hashGenerado);

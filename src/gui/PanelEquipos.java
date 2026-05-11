@@ -218,13 +218,18 @@ public class PanelEquipos extends javax.swing.JPanel {
             return;
         }
 
-        int idTipo = listaIdTipos.get(cmbTipo.getSelectedIndex());
-        int idMarca = listaIdMarcas.get(cmbMarca.getSelectedIndex());
-        
-        if (idTipo == -1 || idMarca == -1) {
-            JOptionPane.showMessageDialog(this, "Por favor, seleccione un Tipo y una Marca válidos.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+        // --- BLINDAJE LÓGICO ---
+        int indexTipo = cmbTipo.getSelectedIndex();
+        int indexMarca = cmbMarca.getSelectedIndex();
+
+        // Validamos que hayan seleccionado algo válido (mayor a 0 porque el 0 es "--- Seleccione ---")
+        if (indexTipo <= 0 || indexMarca <= 0) {
+            JOptionPane.showMessageDialog(this, "Por favor, seleccione un Tipo de equipo y una Marca.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
+        int idTipo = listaIdTipos.get(indexTipo);
+        int idMarca = listaIdMarcas.get(indexMarca);
 
         String modeloEquipo = txtModelo.getText().trim();
         String imeiSerie = txtImei.getText().trim();
@@ -240,17 +245,16 @@ public class PanelEquipos extends javax.swing.JPanel {
         }
 
         modelo.EquipoRegistrado nuevoEquipo = new modelo.EquipoRegistrado(
-            idClienteSeleccionado,
-            idTipo,
-            idMarca,
-            modeloEquipo,
-            imeiSerie
+            idClienteSeleccionado, idTipo, idMarca, modeloEquipo, imeiSerie
         );
 
         dao.EquipoRegistradoDAO daoEquipo = new dao.EquipoRegistradoDAO();
 
         if (daoEquipo.insertar(nuevoEquipo)) {
-            JOptionPane.showMessageDialog(this, "¡Equipo registrado exitosamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            // =========================================================
+            // ¡MAGIA APLICADA! Usamos tu notificador nativo de Windows
+            // =========================================================
+            utilidades.NotificadorWindows.mostrarAlerta("Registro Exitoso", "El equipo ha sido asignado al cliente correctamente.", java.awt.TrayIcon.MessageType.INFO);
 
             txtCliente.setText("");
             cmbTipo.setSelectedIndex(0); 
